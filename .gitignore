@@ -1,0 +1,36 @@
+# Environment & venv
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database & Uploads
+*.sqlite3
+*.db
+backend/uploads/
+uploads/
+
+# IDE & OS
+.DS_Store
+.idea/
+.vscode/
