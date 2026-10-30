@@ -9,13 +9,21 @@ from slowapi.middleware import SlowAPIMiddleware
 from slowapi import _rate_limit_exceeded_handler
 
 from app.config import settings
-from app.database import Base, engine, check_db_health
 import app.models  # Ensures all models (including Payment and RefreshToken) are registered
 from app.limiter import limiter
+from app.database import Base, engine, SessionLocal, check_db_health
+from app.models.course import Course
 from app.api import (
     auth, users, categories, courses, modules, lessons,
     enrollments, progress, quizzes, discussions, bookmarks, notifications, admin, payments
 )
+
+# ── Structured logging setup ──────────────────────────────────────────────────
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s %(message)s",
+)
+logger = logging.getLogger("studyhub")
 
 # Initialize database schema tables if not exist (skipped in test mode)
 if not settings.TESTING:
@@ -25,18 +33,25 @@ if not settings.TESTING:
             from sqlalchemy import text
             try:
                 conn.execute(text("ALTER TABLE courses ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0;"))
+                conn.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'card';"))
+                conn.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS bank_or_vpa VARCHAR(100);"))
+                conn.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(100);"))
                 conn.commit()
             except Exception:
                 pass
+
+        # Check if database needs initial seeding (e.g. freshly deployed on Render)
+        db_check = SessionLocal()
+        try:
+            if db_check.query(Course).count() == 0:
+                logger.info("Fresh database detected on startup. Auto-seeding core curriculum courses...")
+                from app.seed import seed_database
+                seed_database(custom_db=db_check)
+                logger.info("Auto-seeding completed successfully!")
+        finally:
+            db_check.close()
     except Exception as e:
         logger.warning(f"Database initialization deferred or unreachable: {e}")
-
-# ── Structured logging setup ──────────────────────────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s %(message)s",
-)
-logger = logging.getLogger("studyhub")
 
 
 # ── Request ID Middleware ─────────────────────────────────────────────────────
@@ -98,7 +113,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestSizeLimitMiddleware)
 app.add_middleware(RequestIDMiddleware)
 
-# CORS — restricted to known origins and explicit methods
+# CORS — restricted to known origins, Vercel deployments, and explicit methods
 origins = settings.cors_origin_list
 for default_origin in ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:3000"]:
     if default_origin not in origins:
@@ -107,9 +122,10 @@ for default_origin in ["http://localhost:5173", "http://127.0.0.1:5173", "http:/
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
+    allow_headers=["*"],
 )
 
 

@@ -51,11 +51,12 @@ RUN chown -R appuser:appgroup /app
 
 USER appuser
 
+ENV PORT=8000
 EXPOSE 8000
 
 # Health check verifies the live database connection and FastAPI routing
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health || curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:${PORT:-8000}/api/v1/health || curl -f http://localhost:${PORT:-8000}/health || exit 1
 
-# Run database migrations then start the production server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4"]
+# Run database migrations then start the production server with dynamic port support
+CMD ["sh", "-c", "alembic upgrade head 2>/dev/null || true; exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 2"]
