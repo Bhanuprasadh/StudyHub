@@ -1,19 +1,45 @@
+/**
+ * Axios API client — Production-grade configuration
+ *
+ * Security model:
+ * - Access token supported both in-memory and in localStorage
+ * - Refresh token supported via payload and HttpOnly cookie
+ * - On 401: automatically attempts silent token refresh with request queueing
+ * - On refresh failure: redirects to /login with returnUrl
+ */
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
 
+let _accessToken = null;
+
+export const setAccessToken = (token) => {
+  _accessToken = token;
+  if (token) {
+    localStorage.setItem('studyhub_token', token);
+  }
+};
+
+export const clearAccessToken = () => {
+  _accessToken = null;
+  localStorage.removeItem('studyhub_token');
+  localStorage.removeItem('studyhub_refresh_token');
+  localStorage.removeItem('studyhub_user');
+};
+
+export const getAccessToken = () => _accessToken || localStorage.getItem('studyhub_token');
+
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
   timeout: 15000,
+  withCredentials: true,
 });
 
-// Request interceptor to automatically inject Authorization token
+// ── Request interceptor ───────────────────────────────────────────────────────
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('studyhub_token');
+    const token = getAccessToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -22,16 +48,16 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle session expiration cleanly and refresh JWT
+// ── Response interceptor: silent refresh on 401 ──────────────────────────────
 let isRefreshing = false;
 let failedQueue = [];
 
 const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
+  failedQueue.forEach(({ resolve, reject }) => {
     if (error) {
-      prom.reject(error);
+      reject(error);
     } else {
-      prom.resolve(token);
+      resolve(token);
     }
   });
   failedQueue = [];
@@ -47,52 +73,51 @@ apiClient.interceptors.response.use(
       originalRequest?.url?.includes('/auth/refresh') ||
       originalRequest?.url?.includes('/auth/forgot-password');
 
-    if (error.response && error.response.status === 401 && !isAuthRoute && !originalRequest._retry) {
-      const refreshToken = localStorage.getItem('studyhub_refresh_token');
-
-      if (refreshToken) {
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
-            failedQueue.push({ resolve, reject });
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthRoute) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return apiClient(originalRequest);
           })
-            .then((token) => {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              return apiClient(originalRequest);
-            })
-            .catch((err) => Promise.reject(err));
+          .catch((err) => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const storedRefreshToken = localStorage.getItem('studyhub_refresh_token');
+
+      try {
+        const { data } = await axios.post(
+          `${API_BASE_URL}/auth/refresh`,
+          storedRefreshToken ? { refresh_token: storedRefreshToken } : {},
+          { withCredentials: true }
+        );
+
+        const newToken = data.access_token;
+        setAccessToken(newToken);
+        if (data.refresh_token) {
+          localStorage.setItem('studyhub_refresh_token', data.refresh_token);
         }
 
-        originalRequest._retry = true;
-        isRefreshing = true;
-
-        try {
-          const res = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-            refresh_token: refreshToken,
-          });
-
-          const { access_token, refresh_token: newRefreshToken } = res.data;
-          localStorage.setItem('studyhub_token', access_token);
-          if (newRefreshToken) {
-            localStorage.setItem('studyhub_refresh_token', newRefreshToken);
+        processQueue(null, newToken);
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        return apiClient(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        clearAccessToken();
+        if (typeof window !== 'undefined' && window.location) {
+          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+          if (!window.location.pathname.includes('/login')) {
+            window.location.href = `/login?returnUrl=${returnUrl}`;
           }
-
-          apiClient.defaults.headers.common.Authorization = `Bearer ${access_token}`;
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-
-          processQueue(null, access_token);
-          return apiClient(originalRequest);
-        } catch (refreshErr) {
-          processQueue(refreshErr, null);
-          localStorage.removeItem('studyhub_token');
-          localStorage.removeItem('studyhub_refresh_token');
-          localStorage.removeItem('studyhub_user');
-          return Promise.reject(refreshErr);
-        } finally {
-          isRefreshing = false;
         }
-      } else {
-        localStorage.removeItem('studyhub_token');
-        localStorage.removeItem('studyhub_user');
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
       }
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import apiClient from '../api/client';
@@ -24,6 +24,29 @@ const Navbar = () => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const notificationsRef = useRef(null);
+
+  // Close menus on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setNotificationsOpen(false);
+  }, [location.pathname]);
+
+  // Handle outside click for notification dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationsRef.current && !notificationsRef.current.contains(event.target)) {
+        setNotificationsOpen(false);
+      }
+    };
+    if (notificationsOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [notificationsOpen]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -51,15 +74,15 @@ const Navbar = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="navbar">
+    <nav className="navbar" style={{ position: 'relative' }}>
       <div className="app-container navbar-inner">
         {/* Brand */}
         <Link to="/" className="navbar-brand">
@@ -113,12 +136,13 @@ const Navbar = () => {
             {isAuthenticated ? (
               <>
                 {/* Notification Bell */}
-                <div style={{ position: 'relative' }}>
+                <div style={{ position: 'relative' }} ref={notificationsRef}>
                   <button
                     onClick={() => setNotificationsOpen(!notificationsOpen)}
                     className="btn btn-secondary btn-sm"
                     style={{ position: 'relative', padding: '0.5rem' }}
                     title="Notifications"
+                    aria-label="Notifications"
                   >
                     <Bell size={18} />
                     {unreadCount > 0 && (
@@ -174,7 +198,7 @@ const Navbar = () => {
                         {unreadCount > 0 && (
                           <button
                             onClick={markAllRead}
-                            style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600 }}
+                            style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer' }}
                           >
                             Mark all read
                           </button>
@@ -226,6 +250,7 @@ const Navbar = () => {
                   onClick={handleLogout}
                   className="btn btn-secondary btn-sm"
                   title="Logout"
+                  aria-label="Logout"
                 >
                   <LogOut size={16} />
                 </button>
@@ -244,15 +269,113 @@ const Navbar = () => {
             {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="btn btn-secondary btn-sm"
-              style={{ display: 'none' }}
+              className="btn btn-secondary btn-sm mobile-nav-toggle"
               id="mobile-nav-toggle"
+              aria-label="Toggle Navigation Menu"
             >
               {mobileMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Mobile Navigation Drawer */}
+      {mobileMenuOpen && (
+        <div className="mobile-drawer">
+          <ul className="mobile-drawer-links">
+            <li>
+              <Link
+                to="/courses"
+                className={isActive('/courses') ? 'active' : ''}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <BookOpen size={18} /> Course Catalog
+              </Link>
+            </li>
+
+            {isAuthenticated && (
+              <li>
+                <Link
+                  to="/dashboard"
+                  className={isActive('/dashboard') ? 'active' : ''}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <LayoutDashboard size={18} /> Student Dashboard
+                </Link>
+              </li>
+            )}
+
+            {isInstructor && (
+              <li>
+                <Link
+                  to="/instructor"
+                  className={isActive('/instructor') ? 'active' : ''}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <PlusCircle size={18} /> Instructor Studio
+                </Link>
+              </li>
+            )}
+
+            {isAdmin && (
+              <li>
+                <Link
+                  to="/admin"
+                  className={isActive('/admin') ? 'active' : ''}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Shield size={18} /> Admin Portal
+                </Link>
+              </li>
+            )}
+
+            {isAuthenticated ? (
+              <>
+                <li>
+                  <Link
+                    to="/profile"
+                    className={isActive('/profile') ? 'active' : ''}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <UserIcon size={18} /> Profile ({user?.role})
+                  </Link>
+                </li>
+                <li style={{ marginTop: '0.5rem' }}>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ width: '100%', justifyContent: 'center', color: 'var(--danger)' }}
+                  >
+                    <LogOut size={16} /> Logout
+                  </button>
+                </li>
+              </>
+            ) : (
+              <li style={{ display: 'flex', gap: '0.75rem', marginTop: '0.75rem' }}>
+                <Link
+                  to="/login"
+                  className="btn btn-secondary btn-sm"
+                  style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Sign In
+                </Link>
+                <Link
+                  to="/register"
+                  className="btn btn-primary btn-sm"
+                  style={{ flex: 1, textAlign: 'center', justifyContent: 'center' }}
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Get Started
+                </Link>
+              </li>
+            )}
+          </ul>
+        </div>
+      )}
     </nav>
   );
 };

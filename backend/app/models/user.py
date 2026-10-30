@@ -1,5 +1,5 @@
-import datetime
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text, Enum
+from datetime import datetime, timezone
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.orm import relationship
 import enum
 from app.database import Base
@@ -9,6 +9,10 @@ class UserRole(str, enum.Enum):
     STUDENT = "student"
     INSTRUCTOR = "instructor"
     ADMIN = "admin"
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -22,8 +26,11 @@ class User(Base):
     bio = Column(Text, nullable=True)
     avatar_url = Column(String(500), nullable=True)
     is_active = Column(Boolean, default=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
+    # Track failed login attempts for account lockout
+    failed_login_attempts = Column(Integer, default=0, nullable=False)
+    locked_until = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=_utcnow, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False)
 
     # Relationships
     taught_courses = relationship("Course", back_populates="instructor", cascade="all, delete-orphan")
@@ -34,3 +41,4 @@ class User(Base):
     discussion_replies = relationship("DiscussionReply", back_populates="author", cascade="all, delete-orphan")
     bookmarks = relationship("Bookmark", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")

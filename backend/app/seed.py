@@ -78,32 +78,38 @@ def sync_course(db, slug, title, short_description, description, instructor_id, 
     return course
 
 
-def seed_database():
+def seed_database(custom_db=None):
     print("🌱 Initializing StudyHub Database Seeder (Safe & Persistent Mode)...")
-    db = SessionLocal()
+    db = custom_db if custom_db is not None else SessionLocal()
 
     try:
-        # Ensure all tables exist without dropping registered student accounts
-        Base.metadata.create_all(bind=engine)
-        db.execute(text("ALTER TABLE courses ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0;"))
-        db.commit()
+        bind = db.get_bind()
+        is_sqlite = bind.dialect.name == "sqlite"
 
-        # Truncate content tables and reset their auto-increment sequences
-        # NOTE: The 'users' table is NOT truncated! All registered student and instructor accounts are preserved!
-        print("Synchronizing course schema and resetting curriculum sequences (preserving all registered users)...")
-        db.execute(text("TRUNCATE TABLE payments, quiz_attempts, attempt_answers, answer_options, quiz_questions, quizzes, lesson_progress, lessons, modules, enrollments, bookmarks, discussion_replies, discussion_threads, resources, courses, categories CASCADE;"))
-        db.execute(text("ALTER SEQUENCE courses_id_seq RESTART WITH 1;"))
-        db.execute(text("ALTER SEQUENCE modules_id_seq RESTART WITH 1;"))
-        db.execute(text("ALTER SEQUENCE lessons_id_seq RESTART WITH 1;"))
-        db.execute(text("ALTER SEQUENCE quizzes_id_seq RESTART WITH 1;"))
-        db.execute(text("ALTER SEQUENCE quiz_questions_id_seq RESTART WITH 1;"))
-        db.execute(text("ALTER SEQUENCE answer_options_id_seq RESTART WITH 1;"))
-        db.execute(text("ALTER SEQUENCE categories_id_seq RESTART WITH 1;"))
-        try:
-            db.execute(text("ALTER SEQUENCE payments_id_seq RESTART WITH 1;"))
-        except Exception:
-            pass
-        db.commit()
+        if not is_sqlite:
+            Base.metadata.create_all(bind=bind)
+            try:
+                db.execute(text("ALTER TABLE courses ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0;"))
+                db.commit()
+            except Exception:
+                pass
+
+            print("Synchronizing course schema and resetting curriculum sequences (preserving all registered users)...")
+            db.execute(text("TRUNCATE TABLE payments, quiz_attempts, attempt_answers, answer_options, quiz_questions, quizzes, lesson_progress, lessons, modules, enrollments, bookmarks, discussion_replies, discussion_threads, resources, courses, categories CASCADE;"))
+            for seq in ["courses_id_seq", "modules_id_seq", "lessons_id_seq", "quizzes_id_seq", "quiz_questions_id_seq", "answer_options_id_seq", "categories_id_seq", "payments_id_seq"]:
+                try:
+                    db.execute(text(f"ALTER SEQUENCE {seq} RESTART WITH 1;"))
+                except Exception:
+                    pass
+            db.commit()
+        else:
+            Base.metadata.create_all(bind=bind)
+            for model in [Payment, QuizAttempt, AttemptAnswer, AnswerOption, Question, Quiz, LessonProgress, Lesson, Module, Enrollment, Bookmark, DiscussionReply, DiscussionThread, Resource, Course, Category]:
+                try:
+                    db.query(model).delete()
+                except Exception:
+                    pass
+            db.commit()
 
         print("Preserving registered accounts and seeding core demo users...")
         admin_user = get_or_create_user(
@@ -1683,7 +1689,8 @@ Referrer-Policy: strict-origin-when-cross-origin
         print(f"❌ Error in database seeder: {e}")
         raise e
     finally:
-        db.close()
+        if custom_db is None:
+            db.close()
 
 
 if __name__ == "__main__":

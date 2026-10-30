@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -74,24 +74,55 @@ def get_course_quizzes(
 ):
     """List quizzes for a given course."""
     quizzes = db.query(Quiz).filter(Quiz.course_id == course_id).all()
+
+    if not quizzes:
+        return []
+
+    quiz_ids = [q.id for q in quizzes]
+
+    # Bulk: question counts per quiz (eliminates N+1)
+    question_counts = (
+        db.query(Question.quiz_id, func.count(Question.id).label("cnt"))
+        .filter(Question.quiz_id.in_(quiz_ids))
+        .group_by(Question.quiz_id)
+        .all()
+    )
+    question_map = {row.quiz_id: row.cnt for row in question_counts}
+
+    # Bulk: latest attempt per quiz for this user (eliminates N+1)
+    latest_attempts_subq = (
+        db.query(
+            QuizAttempt.quiz_id,
+            func.max(QuizAttempt.started_at).label("latest_started_at")
+        )
+        .filter(QuizAttempt.quiz_id.in_(quiz_ids), QuizAttempt.user_id == current_user.id)
+        .group_by(QuizAttempt.quiz_id)
+        .subquery()
+    )
+    latest_attempts = (
+        db.query(QuizAttempt)
+        .join(
+            latest_attempts_subq,
+            (QuizAttempt.quiz_id == latest_attempts_subq.c.quiz_id) &
+            (QuizAttempt.started_at == latest_attempts_subq.c.latest_started_at)
+        )
+        .filter(QuizAttempt.user_id == current_user.id)
+        .all()
+    )
+    attempts_map = {att.quiz_id: att for att in latest_attempts}
+
     results = []
     for q in quizzes:
-        question_count = db.query(func.count(Question.id)).filter(Question.quiz_id == q.id).scalar() or 0
-        latest_attempt = (
-            db.query(QuizAttempt)
-            .filter(QuizAttempt.quiz_id == q.id, QuizAttempt.user_id == current_user.id)
-            .order_by(QuizAttempt.started_at.desc())
-            .first()
-        )
+        latest = attempts_map.get(q.id)
         results.append({
             "id": q.id,
             "title": q.title,
             "description": q.description,
             "time_limit_minutes": q.time_limit_minutes,
             "passing_score": q.passing_score,
-            "total_questions": question_count,
-            "latest_score": latest_attempt.score if latest_attempt else None,
-            "passed": latest_attempt.passed if latest_attempt else None,
+            "total_questions": question_map.get(q.id, 0),
+            "latest_score": latest.score if latest else None,
+            "passed": latest.passed if latest else None,
         })
     return results
 
@@ -190,14 +221,10 @@ def submit_quiz_attempt(
     correct_count = 0
     breakdown = []
 
-    # Map questions and verify answers
     for q in quiz.questions:
         selected_option_id = submitted_map.get(q.id)
-
-        # Find the correct option for this question
         correct_option = next((opt for opt in q.options if opt.is_correct), None)
         correct_option_id = correct_option.id if correct_option else None
-
         is_correct = (selected_option_id is not None) and (selected_option_id == correct_option_id)
         if is_correct:
             correct_count += 1
@@ -211,9 +238,9 @@ def submit_quiz_attempt(
 
     score = round((correct_count / total_questions) * 100.0, 1)
     passed = score >= quiz.passing_score
-    now = datetime.datetime.utcnow()
+    # Fixed: use timezone-aware UTC (not deprecated utcnow)
+    now = datetime.now(timezone.utc)
 
-    # Create QuizAttempt
     attempt = QuizAttempt(
         quiz_id=quiz.id,
         user_id=current_user.id,

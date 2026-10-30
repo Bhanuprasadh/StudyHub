@@ -12,6 +12,7 @@ from app.models.discussion import DiscussionThread, DiscussionReply
 from app.models.bookmark import Bookmark
 from app.models.notification import Notification
 from app.models.payment import Payment
+from app.models.refresh_token import RefreshToken
 
 __all__ = [
     "Base",
@@ -34,4 +35,5 @@ __all__ = [
     "Bookmark",
     "Notification",
     "Payment",
+    "RefreshToken",
 ]

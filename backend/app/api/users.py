@@ -41,7 +41,6 @@ def get_student_dashboard(
     current_user: User = Depends(get_current_user)
 ) -> Dict[str, Any]:
     """Fetch aggregated data for student dashboard."""
-    # Enrolled courses with calculated progress
     enrollments = (
         db.query(Enrollment)
         .filter(Enrollment.user_id == current_user.id)
@@ -49,32 +48,57 @@ def get_student_dashboard(
         .all()
     )
 
+    if not enrollments:
+        return {
+            "user": {
+                "id": current_user.id,
+                "full_name": current_user.full_name,
+                "email": current_user.email,
+                "role": current_user.role,
+            },
+            "stats": {
+                "enrolled_count": 0,
+                "completed_courses_count": 0,
+                "total_quizzes_taken": 0,
+            },
+            "enrolled_courses": [],
+            "recent_quizzes": [],
+        }
+
+    course_ids = [enr.course_id for enr in enrollments]
+
+    # Bulk: total lessons per enrolled course (eliminates N+1)
+    lesson_counts = (
+        db.query(Module.course_id, func.count(Lesson.id).label("cnt"))
+        .join(Lesson, Lesson.module_id == Module.id)
+        .filter(Module.course_id.in_(course_ids))
+        .group_by(Module.course_id)
+        .all()
+    )
+    lessons_map = {row.course_id: row.cnt for row in lesson_counts}
+
+    # Bulk: completed lessons per enrolled course for this user (eliminates N+1)
+    completed_counts = (
+        db.query(Module.course_id, func.count(LessonProgress.id).label("cnt"))
+        .join(Lesson, Lesson.module_id == Module.id)
+        .join(LessonProgress, LessonProgress.lesson_id == Lesson.id)
+        .filter(
+            Module.course_id.in_(course_ids),
+            LessonProgress.user_id == current_user.id,
+            LessonProgress.is_completed.is_(True)
+        )
+        .group_by(Module.course_id)
+        .all()
+    )
+    completed_map = {row.course_id: row.cnt for row in completed_counts}
+
     enrolled_courses = []
     total_completed_courses = 0
 
     for enr in enrollments:
         course = enr.course
-        # Total lessons in course
-        total_lessons = (
-            db.query(func.count(Lesson.id))
-            .join(Module, Lesson.module_id == Module.id)
-            .filter(Module.course_id == course.id)
-            .scalar() or 0
-        )
-
-        # Completed lessons by this user in this course
-        completed_lessons = (
-            db.query(func.count(LessonProgress.id))
-            .join(Lesson, LessonProgress.lesson_id == Lesson.id)
-            .join(Module, Lesson.module_id == Module.id)
-            .filter(
-                Module.course_id == course.id,
-                LessonProgress.user_id == current_user.id,
-                LessonProgress.is_completed.is_(True)
-            )
-            .scalar() or 0
-        )
-
+        total_lessons = lessons_map.get(course.id, 0)
+        completed_lessons = completed_map.get(course.id, 0)
         progress_pct = round((completed_lessons / total_lessons * 100), 1) if total_lessons > 0 else 0.0
         if progress_pct >= 100.0:
             total_completed_courses += 1
@@ -140,28 +164,52 @@ def get_instructor_dashboard(
     if current_user.role not in [UserRole.INSTRUCTOR.value, UserRole.ADMIN.value]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Instructor access required")
 
-    # Courses created by this instructor
     courses_query = db.query(Course)
     if current_user.role == UserRole.INSTRUCTOR.value:
         courses_query = courses_query.filter(Course.instructor_id == current_user.id)
     courses = courses_query.order_by(Course.created_at.desc()).all()
 
+    if not courses:
+        return {
+            "stats": {"total_courses": 0, "total_students_enrolled": 0},
+            "courses": [],
+        }
+
+    course_ids = [c.id for c in courses]
+
+    # Bulk: enrollment counts per course (eliminates N+1)
+    enroll_counts = (
+        db.query(Enrollment.course_id, func.count(Enrollment.id).label("cnt"))
+        .filter(Enrollment.course_id.in_(course_ids))
+        .group_by(Enrollment.course_id)
+        .all()
+    )
+    enroll_map = {row.course_id: row.cnt for row in enroll_counts}
+
+    # Bulk: lesson counts per course (eliminates N+1)
+    lesson_counts = (
+        db.query(Module.course_id, func.count(Lesson.id).label("cnt"))
+        .join(Lesson, Lesson.module_id == Module.id)
+        .filter(Module.course_id.in_(course_ids))
+        .group_by(Module.course_id)
+        .all()
+    )
+    lesson_map = {row.course_id: row.cnt for row in lesson_counts}
+
+    # Bulk: quiz counts per course (eliminates N+1)
+    quiz_counts = (
+        db.query(Quiz.course_id, func.count(Quiz.id).label("cnt"))
+        .filter(Quiz.course_id.in_(course_ids))
+        .group_by(Quiz.course_id)
+        .all()
+    )
+    quiz_map = {row.course_id: row.cnt for row in quiz_counts}
+
     course_items = []
     total_students = 0
-
     for c in courses:
-        student_count = db.query(func.count(Enrollment.id)).filter(Enrollment.course_id == c.id).scalar() or 0
+        student_count = enroll_map.get(c.id, 0)
         total_students += student_count
-
-        lesson_count = (
-            db.query(func.count(Lesson.id))
-            .join(Module, Lesson.module_id == Module.id)
-            .filter(Module.course_id == c.id)
-            .scalar() or 0
-        )
-
-        quiz_count = db.query(func.count(Quiz.id)).filter(Quiz.course_id == c.id).scalar() or 0
-
         course_items.append({
             "id": c.id,
             "title": c.title,
@@ -171,8 +219,8 @@ def get_instructor_dashboard(
             "thumbnail_url": c.thumbnail_url,
             "created_at": c.created_at,
             "total_students": student_count,
-            "total_lessons": lesson_count,
-            "total_quizzes": quiz_count,
+            "total_lessons": lesson_map.get(c.id, 0),
+            "total_quizzes": quiz_map.get(c.id, 0),
         })
 
     return {

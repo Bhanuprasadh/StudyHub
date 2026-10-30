@@ -6,7 +6,6 @@ from typing import List, Optional
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.course import Course
-from app.models.category import Category
 from app.models.module import Module
 from app.models.lesson import Lesson
 from app.models.enrollment import Enrollment
@@ -51,21 +50,37 @@ def get_courses(
     if level:
         query = query.filter(Course.level == level)
 
+    total = query.count()
     offset = (page - 1) * limit
     courses = query.order_by(Course.id.asc()).offset(offset).limit(limit).all()
 
-    # Annotate total lessons and enrollments
+    if not courses:
+        return []
+
+    course_ids = [c.id for c in courses]
+
+    # Bulk aggregation: total lessons per course (eliminates N+1)
+    lesson_counts = (
+        db.query(Module.course_id, func.count(Lesson.id).label("cnt"))
+        .join(Lesson, Lesson.module_id == Module.id)
+        .filter(Module.course_id.in_(course_ids))
+        .group_by(Module.course_id)
+        .all()
+    )
+    lessons_map = {row.course_id: row.cnt for row in lesson_counts}
+
+    # Bulk aggregation: total enrollments per course (eliminates N+1)
+    enroll_counts = (
+        db.query(Enrollment.course_id, func.count(Enrollment.id).label("cnt"))
+        .filter(Enrollment.course_id.in_(course_ids))
+        .group_by(Enrollment.course_id)
+        .all()
+    )
+    enrollments_map = {row.course_id: row.cnt for row in enroll_counts}
+
     results = []
     for c in courses:
-        total_lessons = (
-            db.query(func.count(Lesson.id))
-            .join(Module, Lesson.module_id == Module.id)
-            .filter(Module.course_id == c.id)
-            .scalar() or 0
-        )
-        total_enrollments = db.query(func.count(Enrollment.id)).filter(Enrollment.course_id == c.id).scalar() or 0
-
-        c_dict = {
+        results.append({
             "id": c.id,
             "title": c.title,
             "slug": c.slug,
@@ -78,10 +93,9 @@ def get_courses(
             "created_at": c.created_at,
             "instructor": c.instructor,
             "category": c.category,
-            "total_lessons": total_lessons,
-            "total_enrollments": total_enrollments,
-        }
-        results.append(c_dict)
+            "total_lessons": lessons_map.get(c.id, 0),
+            "total_enrollments": enrollments_map.get(c.id, 0),
+        })
 
     return results
 
@@ -132,7 +146,6 @@ def get_course_detail(
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    # Counts
     total_lessons = (
         db.query(func.count(Lesson.id))
         .join(Module, Lesson.module_id == Module.id)

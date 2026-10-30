@@ -9,6 +9,7 @@ The following Mermaid diagram models the entities, primary keys, foreign keys, a
 
 ```mermaid
 erDiagram
+    USERS ||--o{ REFRESH_TOKENS : "issues"
     USERS ||--o{ COURSES : "instructs"
     USERS ||--o{ ENROLLMENTS : "registers"
     USERS ||--o{ LESSON_PROGRESS : "completes"
@@ -18,29 +19,16 @@ erDiagram
     USERS ||--o{ BOOKMARKS : "saves"
     USERS ||--o{ NOTIFICATIONS : "receives"
 
-    CATEGORIES ||--o{ COURSES : "classifies"
-
-    COURSES ||--o{ MODULES : "contains"
-    COURSES ||--o{ ENROLLMENTS : "has_students"
-    COURSES ||--o{ QUIZZES : "evaluates"
-    COURSES ||--o{ DISCUSSION_THREADS : "hosts"
-    COURSES ||--o{ BOOKMARKS : "bookmarked_by"
-
-    MODULES ||--o{ LESSONS : "organizes"
-
-    LESSONS ||--o{ RESOURCES : "attaches"
-    LESSONS ||--o{ LESSON_PROGRESS : "tracked_in"
-    LESSONS ||--o{ QUIZZES : "optionally_associates"
-
-    QUIZZES ||--o{ QUIZ_QUESTIONS : "includes"
-    QUIZZES ||--o{ QUIZ_ATTEMPTS : "recorded_as"
-
-    QUIZ_QUESTIONS ||--o{ ANSWER_OPTIONS : "offers"
-    QUIZ_QUESTIONS ||--o{ ATTEMPT_ANSWERS : "evaluated_in"
-
-    QUIZ_ATTEMPTS ||--o{ ATTEMPT_ANSWERS : "contains"
-
-    DISCUSSION_THREADS ||--o{ DISCUSSION_REPLIES : "contains"
+    REFRESH_TOKENS {
+        int id PK
+        int user_id FK
+        varchar token_hash UK
+        varchar family_id
+        boolean revoked
+        varchar replaced_by
+        timestamp expires_at
+        timestamp created_at
+    }
 
     USERS {
         int id PK
@@ -51,6 +39,8 @@ erDiagram
         text bio
         varchar avatar_url
         boolean is_active
+        int failed_login_attempts
+        timestamp locked_until
         timestamp created_at
         timestamp updated_at
     }

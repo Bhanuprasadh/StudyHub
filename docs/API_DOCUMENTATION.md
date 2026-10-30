@@ -28,12 +28,14 @@ Content-Type: application/json
 
 ### A. Authentication (`/api/v1/auth`)
 
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/auth/register` | Public | Register a new Student or Instructor. Returns JWT token and User record. |
-| `POST` | `/auth/login` | Public | Authenticate with email and password. Returns JWT token. |
-| `GET` | `/auth/me` | Authenticated | Retrieve current user profile and role details. |
-| `POST` | `/auth/logout` | Authenticated | Confirm session termination on client. |
+| Method | Endpoint | Access | Rate Limit | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `POST` | `/auth/register` | Public | 5 / min | Register a new user with strong password validation. Returns access token + sets refresh cookie. |
+| `POST` | `/auth/login` | Public | 5 / min | Authenticate with credentials. Tracks failed attempts, enforces 15m lockout after 5 failures. Returns access token (15m) + HttpOnly refresh cookie (7d). |
+| `POST` | `/auth/refresh` | Cookie | 20 / min | Validate HttpOnly cookie, rotate refresh token, and issue fresh access token. Employs token reuse detection. |
+| `POST` | `/auth/logout` | Authenticated/Cookie | None | Revoke refresh token in database and clear client cookie. |
+| `POST` | `/auth/logout-all` | Authenticated | None | Revoke all active refresh sessions belonging to authenticated user. |
+| `GET` | `/auth/me` | Authenticated | None | Retrieve current user profile and role details. |
 
 ---
 
