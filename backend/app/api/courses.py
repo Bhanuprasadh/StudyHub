@@ -52,7 +52,7 @@ def get_courses(
 
     total = query.count()
     offset = (page - 1) * limit
-    courses = query.order_by(Course.created_at.desc()).offset(offset).limit(limit).all()
+    courses = query.order_by(Course.id.asc()).offset(offset).limit(limit).all()
 
     if not courses:
         return []

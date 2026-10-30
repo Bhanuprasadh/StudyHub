@@ -102,10 +102,13 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         processRefreshQueue(refreshError, null);
         clearAccessToken();
-        // Redirect to login, preserving the current path as returnUrl
-        if (typeof window !== 'undefined' && window.location) {
-          const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-          window.location.href = `/login?returnUrl=${returnUrl}`;
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('studyhub_token');
+          localStorage.removeItem('studyhub_user');
+          if (window.location) {
+            const returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
+            window.location.href = `/login?returnUrl=${returnUrl}`;
+          }
         }
         return Promise.reject(refreshError);
       } finally {

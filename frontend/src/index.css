@@ -481,3 +481,144 @@ input, textarea, select {
   color: var(--primary);
 }
 
+/* ==========================================================================
+   STRUCTURED LESSON PAGES, TABLES & CALLOUTS
+   ========================================================================== */
+
+/* Page Stepper & Tabs */
+.lesson-page-stepper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.25rem 0.25rem 0.75rem;
+  margin-bottom: 1.5rem;
+  scrollbar-width: thin;
+}
+
+.lesson-page-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.95rem;
+  border-radius: var(--radius-md);
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.lesson-page-tab:hover {
+  background: var(--bg-subtle);
+  color: var(--text-main);
+  border-color: #cbd5e1;
+}
+
+.lesson-page-tab.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+}
+
+.lesson-page-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.08);
+  color: inherit;
+}
+
+.lesson-page-tab.active .lesson-page-tab-badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Page Card Container */
+.lesson-page-card {
+  background: #ffffff;
+  border-radius: var(--radius-md);
+  transition: opacity 0.25s ease;
+}
+
+/* Lesson Markdown Table */
+.lesson-table-wrapper {
+  overflow-x: auto;
+  margin: 1.75rem 0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  background: #ffffff;
+}
+
+.lesson-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+
+.lesson-table thead {
+  background: #f8fafc;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.lesson-table th {
+  padding: 0.85rem 1.15rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.lesson-table td {
+  padding: 0.85rem 1.15rem;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  line-height: 1.55;
+}
+
+.lesson-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.lesson-table tbody tr:nth-child(even) {
+  background-color: #fbfcfe;
+}
+
+.lesson-table tbody tr:hover {
+  background-color: #f1f5f9;
+}
+
+/* Callouts / Alerts */
+.lesson-callout {
+  margin: 1.75rem 0;
+  padding: 1.25rem 1.5rem;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+}
+
+/* Page Bottom Navigation Bar */
+.lesson-page-footer {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+}
+
