@@ -17,15 +17,19 @@ from app.api import (
     enrollments, progress, quizzes, discussions, bookmarks, notifications, admin, payments
 )
 
-# Initialize database schema tables if not exist
-Base.metadata.create_all(bind=engine)
-with engine.connect() as conn:
-    from sqlalchemy import text
+# Initialize database schema tables if not exist (skipped in test mode)
+if not settings.TESTING:
     try:
-        conn.execute(text("ALTER TABLE courses ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0;"))
-        conn.commit()
-    except Exception:
-        pass
+        Base.metadata.create_all(bind=engine)
+        with engine.connect() as conn:
+            from sqlalchemy import text
+            try:
+                conn.execute(text("ALTER TABLE courses ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0;"))
+                conn.commit()
+            except Exception:
+                pass
+    except Exception as e:
+        logger.warning(f"Database initialization deferred or unreachable: {e}")
 
 # ── Structured logging setup ──────────────────────────────────────────────────
 logging.basicConfig(
