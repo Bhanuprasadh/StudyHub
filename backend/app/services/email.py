@@ -260,3 +260,29 @@ def send_course_update_email(to_email: str, full_name: str, course_title: str, u
         action_text="View New Lesson"
     )
     send_email_notification(to_email, subject, html)
+
+
+def send_discussion_reply_email(to_email: str, author_name: str, replier_name: str, thread_title: str, reply_snippet: str, course_id: int):
+    """Email sent to thread author when a peer or instructor replies to their question."""
+    subject = f"💬 New Reply on: {thread_title}"
+    workspace_url = f"{settings.FRONTEND_URL}/learn/{course_id}"
+    html_body = f"""
+    <h2 style="color: #0f172a; font-size: 18px; margin-top: 0; font-weight: 700;">New Response to Your Academic Query</h2>
+    <p style="color: #334155; font-size: 14px; line-height: 1.6;">
+        Hello {author_name}, <strong>{replier_name}</strong> has posted a response to your discussion thread:
+    </p>
+    <div style="background: #f8fafc; border-left: 4px solid #6366f1; border-radius: 4px; padding: 14px 18px; margin: 18px 0; color: #334155; font-size: 14px; font-style: italic;">
+        "{reply_snippet}"
+    </div>
+    <p style="color: #334155; font-size: 14px; line-height: 1.6;">
+        Join the conversation or mark the question as resolved in your course discussion forum:
+    </p>
+    """
+    html = _get_base_html_template(
+        title=subject,
+        content_html=html_body,
+        action_url=workspace_url,
+        action_text="View Discussion Reply"
+    )
+    send_email_notification(to_email, subject, html)
+

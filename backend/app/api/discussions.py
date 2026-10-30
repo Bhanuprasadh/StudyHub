@@ -1,12 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
 from app.models.user import User, UserRole
 from app.models.course import Course
 from app.models.discussion import DiscussionThread, DiscussionReply
+from app.models.notification import Notification
 from app.schemas.discussion import ThreadCreate, ThreadResponse, ReplyCreate, ReplyResponse
 from app.api.deps import get_current_user
+from app.services.email import send_discussion_reply_email
 
 router = APIRouter(prefix="/discussions", tags=["Discussions"])
 
@@ -66,10 +68,11 @@ def get_thread(
 def reply_to_thread(
     thread_id: int,
     reply_in: ReplyCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Add a reply to a discussion thread."""
+    """Add a reply to a discussion thread and forward notification to author's email."""
     thread = db.query(DiscussionThread).filter(DiscussionThread.id == thread_id).first()
     if not thread:
         raise HTTPException(status_code=404, detail="Discussion thread not found")
@@ -80,9 +83,31 @@ def reply_to_thread(
         content=reply_in.content.strip(),
     )
     db.add(reply)
+
+    # If replier is not the thread author, notify the author via in-app and email
+    if thread.user_id != current_user.id:
+        notif = Notification(
+            user_id=thread.user_id,
+            title=f"New reply to '{thread.title[:40]}'",
+            message=f"{current_user.full_name} replied: {reply_in.content.strip()[:100]}",
+        )
+        db.add(notif)
+        if thread.author and thread.author.email:
+            snippet = reply_in.content.strip()[:150] + ("..." if len(reply_in.content.strip()) > 150 else "")
+            background_tasks.add_task(
+                send_discussion_reply_email,
+                to_email=thread.author.email,
+                author_name=thread.author.full_name,
+                replier_name=current_user.full_name,
+                thread_title=thread.title,
+                reply_snippet=snippet,
+                course_id=thread.course_id
+            )
+
     db.commit()
     db.refresh(reply)
     return reply
+
 
 
 @router.delete("/threads/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)

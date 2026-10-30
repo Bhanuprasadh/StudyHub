@@ -198,6 +198,13 @@ def seed_database(custom_db=None):
             description="Distributed system architecture, high availability, caching tiers, and OWASP mitigation.",
             icon="Shield",
         )
+        cat_ai_research = get_or_create_category(
+            db,
+            name="Artificial Intelligence & Research",
+            slug="artificial-intelligence-research",
+            description="Methodologies, foundational tooling, experiment tracking, LaTeX paper writing, and top-tier AI conference publication.",
+            icon="Sparkles",
+        )
 
         # =========================================================================
         # COURSE 1: Full-Stack Web Engineering with FastAPI & React
@@ -1631,6 +1638,774 @@ Referrer-Policy: strict-origin-when-cross-origin
             AnswerOption(question_id=q5_quest4.id, text="Enables automatic database backups", is_correct=False),
             AnswerOption(question_id=q5_quest4.id, text="Encrypts local storage on mobile devices", is_correct=False),
             AnswerOption(question_id=q5_quest4.id, text="Replaces HTTPS with HTTP", is_correct=False),
+        ])
+        db.flush()
+
+        # =========================================================================
+        # COURSE 6: AI Research Methodology: How to Start, Execute & Publish SOTA Research
+        # =========================================================================
+        print("Authoring Course 6: AI Research Methodology: How to Start, Execute & Publish SOTA Research...")
+        course_6 = sync_course(
+            db,
+            slug="ai-research-methodology-tools-publication",
+            title="AI Research Methodology: How to Start, Execute & Publish SOTA Research",
+            short_description="A comprehensive masterclass on formulating novel research questions, conducting systematic literature reviews, managing GPU compute & baselines, writing LaTeX papers, and publishing at top AI venues (NeurIPS, ICML, ICLR).",
+            description="""This masterclass guides graduate students, scholars, and AI engineers through the complete, end-to-end scientific research lifecycle in Artificial Intelligence, Machine Learning, and Deep Learning.
+
+Students learn to navigate academic literature systematically using arXiv, Semantic Scholar, and Papers with Code; formulate mathematically rigorous problem definitions; reproduce competitive baselines; manage multi-GPU compute clusters with Slurm and PyTorch 2.x; track ablation studies using Weights & Biases; typeset publication-grade manuscripts in LaTeX using Overleaf; and successfully navigate the OpenReview peer review and rebuttal process.
+
+Key Highlights:
+- Section 0 Roadmap: 16-Week Milestone Plan from literature discovery to camera-ready publication.
+- Systematic literature review tools: arXiv API, Semantic Scholar Graph, Connected Papers, and Zotero Better BibTeX.
+- Mathematical formalization: Optimization objectives, loss functions, PAC learning, and empirical hypotheses.
+- Compute & Reproducibility: PyTorch 2.x DDP, Slurm batch scheduling, CUDA seed determinism, and W&B experiment tracking.
+- Publication craftsmanship: NeurIPS/ICLR LaTeX templates, vector figures with TikZ and Matplotlib, and clean booktabs tables.
+- Open science: OpenReview rebuttal tactics, Hugging Face model cards, and GitHub reproducibility checklists.
+- Official documentation links embedded throughout every module.""",
+            instructor_id=instructor_1.id,
+            category_id=cat_ai_research.id,
+            level="advanced",
+            thumbnail_url="/images/course-6-ai-research.jpg",
+            price=1499,
+        )
+
+        # -------------------------------------------------------------------------
+        # Course 6 - Modules
+        # -------------------------------------------------------------------------
+        c6_m0 = Module(
+            course_id=course_6.id,
+            title="Section 0: Academic AI Research Roadmap & Milestones",
+            description="Complete 16-week milestone architecture from topic conception to camera-ready paper submission.",
+            order_index=0,
+        )
+        c6_m1 = Module(
+            course_id=course_6.id,
+            title="Module 1: Literature Discovery, Citation Graphs & Problem Formulation",
+            description="Systematic literature searches, citation network analysis, and mathematical problem definition.",
+            order_index=1,
+        )
+        c6_m2 = Module(
+            course_id=course_6.id,
+            title="Module 2: Rigorous Experimentation, Baselines & Compute Infrastructure",
+            description="GPU cluster orchestration, PyTorch 2.x determinism, Slurm scripting, and Weights & Biases experiment tracking.",
+            order_index=2,
+        )
+        c6_m3 = Module(
+            course_id=course_6.id,
+            title="Module 3: Scientific Paper Writing with LaTeX, Overleaf & Publication Graphics",
+            description="Composing top-tier conference manuscripts in LaTeX, formatting mathematical proofs, and generating vector TikZ figures.",
+            order_index=3,
+        )
+        c6_m4 = Module(
+            course_id=course_6.id,
+            title="Module 4: The Peer Review Process, Rebuttals & Open Science",
+            description="Navigating OpenReview.net, formulating winning reviewer rebuttals, and publishing reproducible artifacts.",
+            order_index=4,
+        )
+        db.add_all([c6_m0, c6_m1, c6_m2, c6_m3, c6_m4])
+        db.flush()
+
+        # -------------------------------------------------------------------------
+        # Course 6 - Lessons
+        # -------------------------------------------------------------------------
+        c6_l0 = Lesson(
+            module_id=c6_m0.id,
+            title="AI Research Roadmap: From Problem Formulation to Top-Tier Conference Publication",
+            content_type="roadmap",
+            duration_minutes=35,
+            order_index=0,
+            content_text="""## 🧭 Section 0: The Complete AI Research Roadmap
+
+Embarking on original research in Artificial Intelligence requires navigating a rigorous path that balances theoretical novelty, empirical validation, compute constraints, and clear scientific communication. This roadmap defines the phased progression required to produce state-of-the-art (SOTA) work ready for premier venues like **NeurIPS, ICML, ICLR, CVPR, and ACL**.
+
+---
+
+### 🗺️ The 16-Week AI Research Phased Lifecycle
+
+```
+[ Phase 1: Weeks 1-3 ] ──► [ Phase 2: Weeks 4-6 ] ──► [ Phase 3: Weeks 7-11 ] ──► [ Phase 4: Weeks 12-14 ] ──► [ Phase 5: Weeks 15-16+ ]
+  Topic Selection &          Mathematical Framing        Multi-GPU Clusters,          LaTeX Manuscript,           OpenReview Submission,
+  arXiv / S2AG Review        & Baseline Reproduction     Ablations & W&B Metrics      TikZ & Booktabs Tables      Rebuttal & Camera-Ready
+```
+
+---
+
+### 📅 Week-by-Week Milestone Breakdown
+
+| Milestone Window | Focus Area | Key Deliverables & Validation Criteria | Primary Tooling Stack |
+| :--- | :--- | :--- | :--- |
+| **Weeks 1 - 3** | **Topic Selection & Literature Review** | Identify research gap, read 40+ papers, build citation graph, formulate core hypothesis. | arXiv, Semantic Scholar, Connected Papers, Zotero |
+| **Weeks 4 - 6** | **Problem Framing & Baseline Reproduction** | Formulate loss functions and optimization bounds; verify existing public benchmarks on local/cloud GPUs. | PyTorch 2.x, Papers with Code, Hugging Face Transformers |
+| **Weeks 7 - 11** | **Method Innovation & Ablations** | Implement novel algorithm; run multi-seed experiments across 5+ random seeds; track gradient norms and ablations. | Slurm, NVIDIA CUDA, Weights & Biases (W&B), DeepSpeed |
+| **Weeks 12 - 14** | **LaTeX Paper Composition** | Write 8-9 page manuscript following NeurIPS/ICLR style guides; create vector PDF diagrams and publication tables. | Overleaf, LaTeX (neurips.sty), TikZ, Matplotlib (PGF) |
+| **Weeks 15 - 16+** | **Peer Review & Open Science** | Submit to OpenReview; draft point-by-point author rebuttal; release GitHub repository and Hugging Face model cards. | OpenReview.net, GitHub, Hugging Face Hub, Docker |
+
+---
+
+### 🛠️ The Essential AI Researcher's Toolchain
+
+1. **Literature & Citation Intelligence**:
+   - **arXiv e-Print Archive**: Preprints in `cs.LG` (Machine Learning), `cs.CV` (Computer Vision), `cs.CL` (Computation & Language).
+   - **Semantic Scholar (S2AG)**: Citation velocity, influential citations, and author graph APIs.
+   - **Connected Papers / Litmaps**: Visual co-citation graph exploration.
+   - **Zotero + Better BibTeX**: Citation key management and automated `.bib` sync.
+
+2. **Computation & Distributed Training**:
+   - **PyTorch 2.x**: Core deep learning framework with `torch.compile` and `DistributedDataParallel` (DDP).
+   - **Slurm Workload Manager**: Resource allocation, batch script scheduling (`sbatch`), and multi-node GPU coordination.
+   - **Weights & Biases (W&B)**: Hyperparameter sweeping, loss visualization, hardware telemetry, and artifact lineage.
+
+3. **Writing & Typography**:
+   - **Overleaf (LaTeX)**: Collaborative authoring with official conference style sheets (`neurips_2024.sty`, `iclr2025.sty`).
+   - **TikZ / Matplotlib (PDF/PGF)**: Publication-grade vector graphics with matched document typography.
+   - **Booktabs**: Professional scientific tables without vertical gridlines.
+
+4. **Review & Open Science**:
+   - **OpenReview**: Anonymous double-blind submission, public discussion threads, and rebuttal management.
+   - **Hugging Face Hub**: Pretrained weights, evaluation benchmarks, and interactive demo spaces (Gradio).
+
+---
+
+### 📚 Official Resources & Standards
+
+- **NeurIPS Author Guidelines & Paper Checklist**: [https://neurips.cc/Conferences/2024/PaperChecklist](https://neurips.cc/Conferences/2024/PaperChecklist)
+- **ICLR Author Instructions**: [https://iclr.cc/Conferences/2025/AuthorGuide](https://iclr.cc/Conferences/2025/AuthorGuide)
+- **PyTorch Research Best Practices**: [https://pytorch.org/docs/stable/notes/randomness.html](https://pytorch.org/docs/stable/notes/randomness.html)
+- **OpenReview Documentation**: [https://docs.openreview.net/](https://docs.openreview.net/)""",
+        )
+
+        c6_l1 = Lesson(
+            module_id=c6_m1.id,
+            title="Systematic Literature Reviews & Academic Tooling: arXiv, Semantic Scholar, Papers with Code & Zotero",
+            content_type="article",
+            duration_minutes=40,
+            order_index=0,
+            content_text="""## 🔍 Systematic Literature Review for Modern AI Research
+
+A rigorous literature review establishes the foundation of your scientific contribution. In AI, where hundreds of preprints are submitted to arXiv weekly, intuition-based reading is insufficient. You need an automated, systematic pipeline for literature discovery and citation graph analysis.
+
+---
+
+### 1. Navigating the arXiv Ecosystem
+
+arXiv is the primary preprint repository for AI research. The most relevant computer science categories include:
+- `cs.LG`: Learning (Machine Learning algorithms, optimization, representations)
+- `cs.CV`: Computer Vision and Pattern Recognition
+- `cs.CL`: Computation and Language (Natural Language Processing, LLMs)
+- `stat.ML`: Machine Learning (Statistical theory and proofs)
+
+#### Programmatic Querying with the arXiv API:
+
+```python
+import urllib.request
+import xml.etree.ElementTree as ET
+
+# Query top recent machine learning preprints on Transformer efficiency
+url = "http://export.arxiv.org/api/query?search_query=cat:cs.LG+AND+all:transformer+efficiency&start=0&max_results=5&sortBy=submittedDate&sortOrder=descending"
+
+response = urllib.request.urlopen(url)
+xml_data = response.read()
+root = ET.fromstring(xml_data)
+
+ns = {"atom": "http://www.w3.org/2005/Atom"}
+for entry in root.findall("atom:entry", ns):
+    title = entry.find("atom:title", ns).text.strip().replace("\\n", " ")
+    published = entry.find("atom:published", ns).text[:10]
+    arxiv_id = entry.find("atom:id", ns).text.split("/abs/")[-1]
+    print(f"[{published}] {arxiv_id}: {title}")
+```
+
+---
+
+### 2. Exploring Citation Graphs: Semantic Scholar & Connected Papers
+
+Relying solely on keyword search introduces selection bias. Top researchers use **citation graph traversal**:
+
+1. **Seed Paper Identification**: Choose 2-3 seminal papers that directly address your problem.
+2. **Backward Citation Chaining**: Inspect what these seminal papers cited to understand foundational assumptions.
+3. **Forward Citation Chaining**: Use Semantic Scholar's *Highly Influential Citations* filter to discover how recent works extended or critiqued the seeds.
+4. **Co-citation Clustering**: Use Connected Papers to construct a visual 2D projection of related works based on bibliographic coupling.
+
+---
+
+### 3. Zotero & Better BibTeX Configuration
+
+Maintain absolute consistency in your references:
+- Install the **Zotero Better BibTeX** extension.
+- Configure automatic citation key generation with the standard pattern:
+  `[auth:lower]_[year]_[shorttitle:lower]` (e.g., `vaswani_2017_attention`).
+- Enable auto-export of a shared `references.bib` file that synchronizes directly with your Overleaf repository.
+
+---
+
+### 4. Literature Comparison Matrix Template
+
+When reading candidate papers, record their attributes into a structured matrix:
+
+| Paper & Year | Core Hypothesis | Baseline Architectures | Benchmark Datasets | Key Limitation / Unaddressed Gap |
+| :--- | :--- | :--- | :--- | :--- |
+| *Vaswani et al. (2017)* | Self-attention eliminates recurrent bottlenecks | Bi-LSTM, ByteNet | WMT 2014 En-De, En-Fr | Quadratic $O(N^2)$ sequence memory |
+| *Dao et al. (2022)* | IO-awareness in SRAM minimizes GPU HBM memory trips | Standard PyTorch Attention | ImageNet, Wikitext-103 | Requires specialized CUDA kernel engineering |
+| *Your Target Work* | Sub-quadratic linear projection with state-space memory | FlashAttention-2, Mamba | Long-Range Arena (LRA), SlimPajama | Focus of this research curriculum |
+
+---
+
+### 📚 Official References & APIs
+
+- **arXiv API User Manual**: [https://arxiv.org/help/api/](https://arxiv.org/help/api/)
+- **Semantic Scholar Academic Graph API**: [https://www.semanticscholar.org/product/api](https://www.semanticscholar.org/product/api)
+- **Papers with Code Datasets & Benchmarks**: [https://paperswithcode.com/datasets](https://paperswithcode.com/datasets)
+- **Zotero Documentation**: [https://www.zotero.org/support/](https://www.zotero.org/support/)""",
+        )
+
+        c6_l2 = Lesson(
+            module_id=c6_m1.id,
+            title="Mathematical Formulation, Optimization Objectives & Empirical Hypotheses",
+            content_type="article",
+            duration_minutes=45,
+            order_index=1,
+            content_text=r"""## 📐 Mathematical Formulation & Problem Framing in AI
+
+Premier AI conferences prioritize papers with unambiguous, mathematically formalized problem statements. Hand-waving explanations lead to immediate reviewer rejection.
+
+---
+
+### 1. Formulating the Empirical Machine Learning Problem
+
+Every machine learning task should be formalized into standard mathematical notation:
+
+1. **Domain Spaces**: Input space $\mathcal{X} \subseteq \mathbb{R}^d$ and label space $\mathcal{Y}$.
+2. **Data Distribution**: Unknown underlying data generating distribution $\mathcal{D}$ over $\mathcal{X} \times \mathcal{Y}$.
+3. **Hypothesis Class**: Parameterized function class $\mathcal{F} = \{f_\theta : \mathcal{X} \to \mathcal{Y} \mid \theta \in \Theta\}$.
+4. **Empirical Risk Minimization (ERM)**: Given training sample $\mathcal{S} = \{(x_i, y_i)\}_{i=1}^N \sim \mathcal{D}^N$, optimize:
+
+$$\min_{\theta \in \Theta} \mathcal{R}_{emp}(\theta) = \frac{1}{N} \sum_{i=1}^N \mathcal{L}(f_\theta(x_i), y_i) + \lambda \Omega(\theta)$$
+
+Where $\mathcal{L}(\cdot)$ is the surrogate loss function (e.g., cross-entropy, InfoNCE) and $\Omega(\theta)$ represents regularizers (e.g., $L_2$ weight decay, spectral norm constraints).
+
+---
+
+### 2. Defining Contrastive & Representation Learning Objectives
+
+When proposing novel self-supervised or representation learning methods, express the loss with exact mathematical definitions:
+
+$$\mathcal{L}_{\text{InfoNCE}}(q, k^+, \{k^-\}) = -\log \frac{\exp(q \cdot k^+ / \tau)}{\exp(q \cdot k^+ / \tau) + \sum_{j=1}^K \exp(q \cdot k_j^- / \tau)}$$
+
+- $q$: query representation vector
+- $k^+$: positive key representation vector
+- $\{k_j^-\}_{j=1}^K$: batch of negative keys
+- $\tau$: learnable or fixed temperature parameter
+
+---
+
+### 3. Formulating Testable Scientific Hypotheses
+
+An AI paper must test explicit, falsifiable hypotheses:
+
+- **Null Hypothesis ($H_0$)**: The proposed modification (e.g., sparse rotary positional embeddings) yields no statistically significant improvement in perplexity over standard rotary embeddings on sequence lengths $L > 8192$.
+- **Alternative Hypothesis ($H_1$)**: The proposed modification yields a reduction in cross-entropy loss with $p < 0.01$ measured across 5 independent random training seeds.
+
+---
+
+### 4. Mathematical Rigor Checklist for NeurIPS / ICLR
+
+| Requirement | Common Error to Avoid | Standard Formalism |
+| :--- | :--- | :--- |
+| **Random Variables** | Conflating sample with distribution | Capital letters for random variables ($X$), lowercase for observations ($x$) |
+| **Matrix Operations** | Ambiguous vector orientation | Specify column vectors $x \in \mathbb{R}^{d \times 1}$, bold uppercase for matrices ($\mathbf{W} \in \mathbb{R}^{m \times n}$) |
+| **Expectations** | Omitting distribution subscript | Always write $\mathbb{E}_{(x, y) \sim \mathcal{D}}[\mathcal{L}(f(x), y)]$ |
+| **Complexity Bounds** | Misusing Big-$O$ notation | Clarify whether bound is time complexity or peak GPU VRAM allocations |
+
+---
+
+### 📚 Official Mathematical Notation Guides
+
+- **Goodfellow, Bengio, Courville Deep Learning Notation Guide**: [https://www.deeplearningbook.org/contents/notation.html](https://www.deeplearningbook.org/contents/notation.html)
+- **IEEE Mathematics Style Manual**: [https://www.ieee.org/content/dam/ieee-org/ieee/web/org/pubs/style_manual.pdf](https://www.ieee.org/content/dam/ieee-org/ieee/web/org/pubs/style_manual.pdf)""",
+        )
+
+        c6_l3 = Lesson(
+            module_id=c6_m2.id,
+            title="High-Performance Compute Clusters, PyTorch 2.x & Distributed Training (Slurm, DDP & ZeRO)",
+            content_type="code",
+            duration_minutes=50,
+            order_index=0,
+            content_text=r"""## ⚡ High-Performance GPU Infrastructure & PyTorch 2.x
+
+Top-tier AI research requires computational reproducibility. Reviewers frequently penalize papers that report results without detailing cluster hardware, CUDA versions, batch allocation, and multi-seed seeds.
+
+---
+
+### 1. PyTorch 2.x Absolute Determinism Configuration
+
+To ensure results can be independently reproduced by reviewers and the open-source community, configure determinism at the entrypoint of all experiment scripts:
+
+```python
+import os
+import random
+import numpy as np
+import torch
+
+def configure_reproducibility(seed: int = 42):
+    # Enforce strict determinism across Python, NumPy, PyTorch CPU & CUDA
+    # Required for NeurIPS/ICLR reproducibility checklists
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+    
+    # CuDNN determinism (trades a small amount of throughput for exact repeatability)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    
+    # Enable PyTorch 2.0 deterministic algorithms check
+    try:
+        torch.use_deterministic_algorithms(True)
+        print(f"✅ Deterministic execution locked with seed {seed}")
+    except Exception as e:
+        print(f"⚠️ Warning: Some ops lack deterministic CUDA kernels: {e}")
+
+if __name__ == "__main__":
+    configure_reproducibility(seed=1337)
+```
+
+---
+
+### 2. Multi-GPU DistributedDataParallel (DDP) Template
+
+When scaling baselines across multi-GPU nodes (e.g., 4x NVIDIA A100/H100), use `torch.distributed` with `torchrun`:
+
+```python
+import os
+import torch
+import torch.nn as nn
+import torch.distributed as dist
+from torch.nn.parallel import DistributedDataParallel as DDP
+
+def setup_distributed():
+    dist.init_process_group(backend="nccl")
+    local_rank = int(os.environ["LOCAL_RANK"])
+    torch.cuda.set_device(local_rank)
+    return local_rank
+
+def cleanup_distributed():
+    dist.destroy_process_group()
+
+def train_step():
+    local_rank = setup_distributed()
+    
+    # Construct model and wrap in DDP
+    model = nn.Sequential(
+        nn.Linear(1024, 2048),
+        nn.ReLU(),
+        nn.Linear(2048, 10)
+    ).to(local_rank)
+    
+    # PyTorch 2.x compiler integration
+    compiled_model = torch.compile(model)
+    ddp_model = DDP(compiled_model, device_ids=[local_rank])
+    
+    optimizer = torch.optim.AdamW(ddp_model.parameters(), lr=1e-3, weight_decay=1e-2)
+    scaler = torch.cuda.amp.GradScaler() # Mixed-precision acceleration
+    
+    # Dummy research batch
+    inputs = torch.randn(64, 1024, device=local_rank)
+    targets = torch.randint(0, 10, (64,), device=local_rank)
+    criterion = nn.CrossEntropyLoss()
+    
+    optimizer.zero_grad(set_to_none=True)
+    with torch.cuda.amp.autocast(dtype=torch.bfloat16):
+        outputs = ddp_model(inputs)
+        loss = criterion(outputs, targets)
+        
+    scaler.scale(loss).backward()
+    scaler.step(optimizer)
+    scaler.update()
+    
+    if local_rank == 0:
+        print(f"Batch loss: {loss.item():.4f}")
+        
+    cleanup_distributed()
+```
+
+Launch with the official launcher:
+```bash
+torchrun --nproc_per_node=4 --nnodes=1 train_ddp.py
+```
+
+---
+
+### 3. Slurm Workload Manager Batch Script (`experiment.sbatch`)
+
+Institutional high-performance clusters (HPCs) use Slurm to allocate GPU resources:
+
+```bash
+#!/bin/bash
+#SBATCH --job-name=ai-sota-benchmark
+#SBATCH --output=logs/%x-%j.out
+#SBATCH --error=logs/%x-%j.err
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=4
+#SBATCH --gres=gpu:a100:4
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=128G
+#SBATCH --time=24:00:00
+#SBATCH --partition=gpu-research
+
+# Load environment modules
+module purge
+module load cuda/12.2 python/3.11
+
+# Activate virtual environment
+source /home/research/venv/bin/activate
+
+# Execute distributed training
+srun torchrun --nproc_per_node=4 train_ddp.py --config configs/neurips_baseline.yaml
+```
+
+---
+
+### 📚 Official Documentation & Manuals
+
+- **PyTorch Distributed Overview**: [https://pytorch.org/docs/stable/distributed.html](https://pytorch.org/docs/stable/distributed.html)
+- **PyTorch 2.0 `torch.compile` Guide**: [https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html](https://pytorch.org/tutorials/intermediate/torch_compile_tutorial.html)
+- **Slurm Workload Manager Quickstart**: [https://slurm.schedmd.com/quickstart.html](https://slurm.schedmd.com/quickstart.html)""",
+        )
+
+        c6_l4 = Lesson(
+            module_id=c6_m2.id,
+            title="Experiment Tracking, Metrics & Ablation Studies with Weights & Biases (W&B)",
+            content_type="code",
+            duration_minutes=45,
+            order_index=1,
+            content_text=r"""## 📊 Experiment Tracking, Hyperparameter Sweeps & Ablations
+
+Scientific peer reviewers evaluate whether your improvements stem from genuine algorithmic novelty or merely lucky hyperparameter tuning. **Weights & Biases (W&B)** provides verifiable experiment telemetry.
+
+---
+
+### 1. Instrumenting Your Model with `wandb`
+
+Track hyperparameters, validation metrics, gradient norms, and hardware telemetry:
+
+```python
+import wandb
+import torch
+
+def run_experiment(config_dict=None):
+    with wandb.init(
+        project="ai-research-neurips",
+        entity="academic-lab",
+        config={
+            "learning_rate": 3e-4,
+            "architecture": "Transformer-Decoder-Sparse",
+            "dataset": "SlimPajama-6B",
+            "batch_size": 128,
+            "weight_decay": 0.1,
+            "warmup_steps": 2000,
+            "random_seed": 42,
+        }
+    ):
+        config = wandb.config
+        
+        # Log custom metrics definition
+        wandb.define_metric("step")
+        wandb.define_metric("train/loss", step_metric="step")
+        wandb.define_metric("eval/perplexity", step_metric="step")
+        
+        for step in range(1, 1001):
+            # Simulated training step
+            loss = 4.5 / (1.0 + 0.005 * step) + 0.05 * torch.randn(1).item()
+            
+            if step % 50 == 0:
+                perplexity = torch.exp(torch.tensor(loss)).item()
+                wandb.log({
+                    "step": step,
+                    "train/loss": loss,
+                    "eval/perplexity": perplexity,
+                    "gpu/memory_allocated_gb": torch.cuda.memory_allocated() / (1024**3) if torch.cuda.is_available() else 0,
+                })
+```
+
+---
+
+### 2. Designing Conclusive Ablation Studies
+
+An ablation study systematically disables or alters individual architectural components to prove each part is necessary and justified.
+
+#### Ablation Matrix Standards:
+
+| Experiment ID | Attention Mechanism | Positional Encoding | LayerNorm Placement | Warmup Steps | Validation Perplexity ($\downarrow$) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Full Proposed Model** | FlashAttention-2 + Sparse | Rotary (RoPE) | Pre-LN (RMSNorm) | 2,000 | **14.22 $\pm$ 0.08** |
+| *Ablation A* | Standard Dense Attention | Rotary (RoPE) | Pre-LN (RMSNorm) | 2,000 | 16.45 $\pm$ 0.12 |
+| *Ablation B* | FlashAttention-2 + Sparse | Absolute Learned | Pre-LN (RMSNorm) | 2,000 | 18.10 $\pm$ 0.25 |
+| *Ablation C* | FlashAttention-2 + Sparse | Rotary (RoPE) | Post-LN (LayerNorm)| 2,000 | Diverged (NaN) |
+| *Ablation D* | FlashAttention-2 + Sparse | Rotary (RoPE) | Pre-LN (RMSNorm) | 0 (No Warmup) | 22.84 $\pm$ 0.40 |
+
+> **Key Rule**: Report mean $\pm$ standard deviation across at least **3 to 5 independent seeds**. Single-seed numbers are treated with suspicion by reviewers.
+
+---
+
+### 3. W&B Hyperparameter Sweeps (`sweep.yaml`)
+
+Automate hyperparameter search with Bayesian optimization:
+
+```yaml
+program: train.py
+method: bayes
+metric:
+  name: eval/perplexity
+  goal: minimize
+parameters:
+  learning_rate:
+    min: 0.0001
+    max: 0.005
+  batch_size:
+    values: [64, 128, 256]
+  dropout:
+    min: 0.0
+    max: 0.3
+early_terminate:
+  type: hyperband
+  min_iter: 500
+```
+
+---
+
+### 📚 Official Weights & Biases Guides
+
+- **W&B Python SDK Reference**: [https://docs.wandb.ai/ref/python](https://docs.wandb.ai/ref/python)
+- **W&B Sweeps Documentation**: [https://docs.wandb.ai/guides/sweeps](https://docs.wandb.ai/guides/sweeps)""",
+        )
+
+        c6_l5 = Lesson(
+            module_id=c6_m3.id,
+            title="Writing Top-Tier Conference Papers with LaTeX, Overleaf & Publication Graphics",
+            content_type="article",
+            duration_minutes=50,
+            order_index=0,
+            content_text=r"""## ✍️ Writing Publication-Ready AI Papers with LaTeX & Overleaf
+
+A brilliant algorithmic idea will be rejected if the manuscript is confusing, poorly organized, or visually sloppy. Reviewers form their initial impression within the first 10 minutes of reading your Title, Abstract, and Introduction.
+
+---
+
+### 1. The Anatomy of an Accepted AI Paper (NeurIPS / ICML / ICLR)
+
+1. **Title**: Precise and informative; avoid vague buzzwords.
+   - *Weak*: "A Deep Learning Model for Sequence Processing"
+   - *Strong*: "Linear-Time Sequence Modeling via State-Space Projections with Input-Dependent Selective Memory"
+
+2. **Abstract (150 - 200 words)**: Follow the 4-sentence formula:
+   - *Sentence 1 (Context & Challenge)*: Foundation models excel at reasoning but suffer from quadratic memory scaling with sequence length.
+   - *Sentence 2 (Limitation)*: Existing sub-quadratic architectures sacrifice associative recall capabilities on dense retrieval tasks.
+   - *Sentence 3 (Proposed Novelty)*: We introduce [Method Name], a novel selective state-space formulation with hardware-aware parallel scans.
+   - *Sentence 4 (Empirical Result)*: Across Long-Range Arena benchmarks, [Method Name] achieves 5.2x higher throughput while improving perplexity by 1.8 points over competitive Transformer baselines.
+
+3. **Introduction**:
+   - Paragraph 1: High-level motivation and industrial/scientific importance.
+   - Paragraph 2: The technical bottleneck that current SOTA fails to resolve.
+   - Paragraph 3: Core conceptual insight of this paper.
+   - Paragraph 4: Itemized summary of contributions (`\\begin{itemize} ... \\end{itemize}`).
+
+---
+
+### 2. LaTeX Best Practices: Clean Booktabs Tables
+
+Never use vertical rules (`|`) in scientific papers. Always use the `booktabs` package (`\\toprule`, `\\midrule`, `\\bottomrule`):
+
+```latex
+\\begin{table}[t]
+\\caption{Comparative benchmark on Language Modeling (WikiText-103). Mean $\\pm$ standard deviation across 5 random seeds. Best results in \\textbf{bold}.}
+\\label{tab:wikitext_results}
+\\centering
+\\begin{tabular}{lcccc}
+\\toprule
+\\textbf{Model Architecture} & \\textbf{Parameters (M)} & \\textbf{Throughput (tok/s)} & \\textbf{Perplexity (PPL) $\\downarrow$} \\\\
+\\midrule
+Transformer-XL (Dai et al., 2019)  & 151M & 12,400 & 18.2 $\\pm$ 0.14 \\\\
+Performer (Choromanski et al., 2020) & 148M & 28,100 & 24.6 $\\pm$ 0.28 \\\\
+FlashAttention-2 (Dao, 2023)        & 151M & 41,200 & 17.9 $\\pm$ 0.09 \\\\
+\\midrule
+\\textbf{Our Proposed Model (Ours)}  & \\textbf{146M} & \\textbf{54,800} & \\textbf{16.8 $\\pm$ 0.05} \\\\
+\\bottomrule
+\\end{tabular}
+\\end{table}
+```
+
+---
+
+### 3. Publication-Grade Vector Graphics with Matplotlib
+
+Never export raster JPEGs or low-res PNGs for charts. Always generate vector PDFs with matched typography:
+
+```python
+import matplotlib.pyplot as plt
+
+# Match LaTeX publication styling
+plt.rcParams.update({
+    "font.family": "serif",
+    "font.size": 10,
+    "axes.labelsize": 11,
+    "axes.titlesize": 12,
+    "figure.autolayout": True,
+    "pdf.fonttype": 42, # Type 42 fonts prevent font rasterization in Overleaf
+})
+
+fig, ax = plt.subplots(figsize=(5.5, 3.2))
+seeds = [1, 2, 3, 4, 5]
+baseline = [18.2, 18.0, 18.3, 18.1, 18.2]
+ours = [16.8, 16.7, 16.9, 16.8, 16.8]
+
+ax.plot(seeds, baseline, marker='o', label="Standard Baseline", color="#64748b", linestyle="--")
+ax.plot(seeds, ours, marker='s', label="Proposed Method (Ours)", color="#4f46e5", linewidth=2)
+ax.set_xlabel("Independent Random Seed")
+ax.set_ylabel("Validation Perplexity (PPL)")
+ax.set_title("Stability Across Random Seed Invocations")
+ax.legend(frameon=True)
+ax.grid(True, linestyle=":", alpha=0.6)
+
+plt.savefig("figures/seed_stability.pdf", format="pdf", bbox_inches="tight")
+print("✅ Vector graphic saved to figures/seed_stability.pdf")
+```
+
+---
+
+### 📚 Official LaTeX & Overleaf Resources
+
+- **Overleaf LaTeX Documentation**: [https://www.overleaf.com/learn](https://www.overleaf.com/learn)
+- **NeurIPS 2024 LaTeX Style Package**: [https://neurips.cc/Conferences/2024/PaperChecklist](https://neurips.cc/Conferences/2024/PaperChecklist)
+- **Booktabs LaTeX Package Manual**: [https://ctan.org/pkg/booktabs](https://ctan.org/pkg/booktabs)""",
+        )
+
+        c6_l6 = Lesson(
+            module_id=c6_m4.id,
+            title="OpenReview, Rebuttal Strategy & Camera-Ready Reproducibility",
+            content_type="article",
+            duration_minutes=40,
+            order_index=0,
+            content_text="""## 🤝 The Peer Review Process, Rebuttals & Open Science
+
+The peer review process at top AI venues operates through **OpenReview.net** using double-blind review, public discussion threads, author rebuttals, and meta-reviews by Area Chairs (ACs).
+
+---
+
+### 1. The OpenReview Lifecycle & Scoring Rubric
+
+Reviewers evaluate submissions on a 1-10 or 1-8 rating scale based on:
+1. **Soundness**: Are technical claims supported by theoretical proofs or rigorous empirical evidence?
+2. **Presentation**: Is the paper clearly written, structured logically, and free from misleading claims?
+3. **Contribution & Novelty**: Does the work provide genuine conceptual advance or substantial empirical utility?
+4. **Reproducibility**: Are all hyperparameter choices, codebases, hardware specs, and datasets fully documented?
+
+---
+
+### 2. Crafting an Effective Author Rebuttal
+
+The rebuttal phase gives you one opportunity to clarify reviewer misunderstandings and provide targeted supplementary experiments.
+
+#### The Golden Rules of Rebuttals:
+- **Never be defensive or confrontational**: Even if a reviewer missed a key section, frame it constructively: *"We appreciate the reviewer's question regarding X. In Section 3.2 (lines 142-156), we formalize this objective, but we will clarify the wording in the revised manuscript to avoid any ambiguity."*
+- **Acknowledge Reviewer Effort**: Open with sincere appreciation for their thoughtful feedback.
+- **Provide Direct Experimental Data**: If Reviewer 2 asks *"How does this perform on Baseline Y?"*, run the experiment during the rebuttal window and present a concise table right in your response.
+- **Organize by Reviewer ID and Points**: Group points by `[R1-W1]` (Reviewer 1, Weakness 1), `[R1-Q1]` (Question 1).
+
+---
+
+### 3. Open Science & Reproducibility Checklist
+
+Upon acceptance, prepare your camera-ready release:
+
+1. **GitHub Repository**:
+   - Provide a minimal 1-command reproduction script: `bash run_reproduce.sh`.
+   - Include pinned `environment.yml` and `Dockerfile`.
+   - Choose an open-source license (MIT, Apache 2.0).
+
+2. **Hugging Face Model Cards**:
+   - Document model architecture, parameter count, training compute hours, carbon footprint, and intended use-cases.
+   - Upload checkpoints with safe serialization formats (`safetensors`, never raw pickle).
+
+---
+
+### 📚 Official Guidelines & Code of Ethics
+
+- **OpenReview Platform Guide**: [https://docs.openreview.net/](https://docs.openreview.net/)
+- **NeurIPS Code and Ethics Guidelines**: [https://neurips.cc/public/EthicsGuidelines](https://neurips.cc/public/EthicsGuidelines)
+- **Hugging Face Model Card Specifications**: [https://huggingface.co/docs/hub/model-cards](https://huggingface.co/docs/hub/model-cards)""",
+        )
+
+        db.add_all([c6_l0, c6_l1, c6_l2, c6_l3, c6_l4, c6_l5, c6_l6])
+        db.flush()
+
+        # -------------------------------------------------------------------------
+        # Course 6 - Official Documentation Resources
+        # -------------------------------------------------------------------------
+        db.add_all([
+            Resource(lesson_id=c6_l0.id, title="Official NeurIPS Paper Checklist & Guidelines", resource_type="link", file_path_or_url="https://neurips.cc/Conferences/2024/PaperChecklist"),
+            Resource(lesson_id=c6_l0.id, title="Official ICLR Author Guide & Formatting Guidelines", resource_type="link", file_path_or_url="https://iclr.cc/Conferences/2025/AuthorGuide"),
+            Resource(lesson_id=c6_l1.id, title="Official arXiv Search API Documentation", resource_type="link", file_path_or_url="https://arxiv.org/help/api/"),
+            Resource(lesson_id=c6_l1.id, title="Semantic Scholar Academic Graph (S2AG) API", resource_type="link", file_path_or_url="https://www.semanticscholar.org/product/api"),
+            Resource(lesson_id=c6_l1.id, title="Papers with Code Datasets & SOTA Leaderboards", resource_type="link", file_path_or_url="https://paperswithcode.com/"),
+            Resource(lesson_id=c6_l3.id, title="Official PyTorch Reproducibility & Randomness Guide", resource_type="link", file_path_or_url="https://pytorch.org/docs/stable/notes/randomness.html"),
+            Resource(lesson_id=c6_l3.id, title="Official PyTorch DistributedDataParallel (DDP) Guide", resource_type="link", file_path_or_url="https://pytorch.org/docs/stable/distributed.html"),
+            Resource(lesson_id=c6_l4.id, title="Official Weights & Biases (W&B) Experiment Tracking Docs", resource_type="link", file_path_or_url="https://docs.wandb.ai/"),
+            Resource(lesson_id=c6_l5.id, title="Official Overleaf LaTeX Scientific Writing Documentation", resource_type="link", file_path_or_url="https://www.overleaf.com/learn"),
+            Resource(lesson_id=c6_l6.id, title="Official OpenReview Author & Reviewer Platform Guide", resource_type="link", file_path_or_url="https://docs.openreview.net/"),
+        ])
+        db.flush()
+
+        # -------------------------------------------------------------------------
+        # Course 6 - Assessment Quiz
+        # -------------------------------------------------------------------------
+        q6 = Quiz(
+            course_id=course_6.id,
+            lesson_id=c6_l6.id,
+            title="AI Research Methodology & SOTA Publication Assessment",
+            description="Assess your comprehension of literature citation graphs, empirical determinism, ablation matrix design, LaTeX typography, and OpenReview rebuttals.",
+            time_limit_minutes=20,
+            passing_score=80.0,
+        )
+        db.add(q6)
+        db.flush()
+
+        q6_quest1 = Question(quiz_id=q6.id, prompt="Which technique is most effective for systematically discovering papers that extended or challenged a foundational seed paper?", order_index=1)
+        q6_quest2 = Question(quiz_id=q6.id, prompt="What is the critical reason for running deep learning experiments across at least 3 to 5 independent random seeds?", order_index=2)
+        q6_quest3 = Question(quiz_id=q6.id, prompt="What constitutes a scientifically rigorous ablation study in an empirical AI research paper?", order_index=3)
+        q6_quest4 = Question(quiz_id=q6.id, prompt="In publication-grade LaTeX manuscripts (using the booktabs package), which convention should be strictly observed?", order_index=4)
+        q6_quest5 = Question(quiz_id=q6.id, prompt="During the OpenReview peer review rebuttal phase, what is the recommended author strategy when addressing a reviewer's misconception?", order_index=5)
+        db.add_all([q6_quest1, q6_quest2, q6_quest3, q6_quest4, q6_quest5])
+        db.flush()
+
+        db.add_all([
+            AnswerOption(question_id=q6_quest1.id, text="Forward Citation Chaining using academic graph APIs (e.g., Semantic Scholar Highly Influential Citations)", is_correct=True),
+            AnswerOption(question_id=q6_quest1.id, text="Searching random keywords on popular blogs", is_correct=False),
+            AnswerOption(question_id=q6_quest1.id, text="Reading only papers published within the last 48 hours", is_correct=False),
+            AnswerOption(question_id=q6_quest1.id, text="Relying exclusively on non-peer-reviewed social media posts", is_correct=False),
+
+            AnswerOption(question_id=q6_quest2.id, text="To verify that empirical gains reflect true algorithmic improvements rather than variance from lucky weight initialization", is_correct=True),
+            AnswerOption(question_id=q6_quest2.id, text="To increase the GPU electricity consumption for higher academic credit", is_correct=False),
+            AnswerOption(question_id=q6_quest2.id, text="Because PyTorch throws a runtime error if only one seed is executed", is_correct=False),
+            AnswerOption(question_id=q6_quest2.id, text="To generate extra rows in the training log file", is_correct=False),
+
+            AnswerOption(question_id=q6_quest3.id, text="Systematically isolating, removing, or replacing individual architectural components under identical compute and hyperparameter conditions", is_correct=True),
+            AnswerOption(question_id=q6_quest3.id, text="Increasing the model parameters by 10x without measuring baseline performance", is_correct=False),
+            AnswerOption(question_id=q6_quest3.id, text="Deleting random lines of code until the model stops converging", is_correct=False),
+            AnswerOption(question_id=q6_quest3.id, text="Selecting only the highest training accuracy step and omitting validation metrics", is_correct=False),
+
+            AnswerOption(question_id=q6_quest4.id, text="Use horizontal rules (toprule, midrule, bottomrule) and avoid all vertical gridlines", is_correct=True),
+            AnswerOption(question_id=q6_quest4.id, text="Use dense double vertical borders on every column", is_correct=False),
+            AnswerOption(question_id=q6_quest4.id, text="Paste a low-resolution screenshot PNG of an Excel spreadsheet", is_correct=False),
+            AnswerOption(question_id=q6_quest4.id, text="Color every cell with different rainbow background colors", is_correct=False),
+
+            AnswerOption(question_id=q6_quest5.id, text="Respond politely with constructive evidence, clarifying the text and providing targeted experimental comparisons", is_correct=True),
+            AnswerOption(question_id=q6_quest5.id, text="Aggressively accuse the reviewer of lack of expertise and demand their immediate dismissal", is_correct=False),
+            AnswerOption(question_id=q6_quest5.id, text="Ignore the reviewer's questions completely and only reply to positive comments", is_correct=False),
+            AnswerOption(question_id=q6_quest5.id, text="Withdraw the paper immediately without reading the other reviews", is_correct=False),
         ])
         db.flush()
 

@@ -150,6 +150,14 @@ const CourseDetail = () => {
 
   // Derive key technical outcomes based on course category
   const getCourseOutcomes = () => {
+    if (course.category?.slug?.includes('ai') || course.category?.slug?.includes('research')) {
+      return [
+        'Formulate novel, impactful AI research hypotheses with rigorous baseline benchmarks',
+        'Execute distributed PyTorch 2.x experiments & ablation studies tracked via Weights & Biases',
+        'Typeset publication-ready scientific papers in LaTeX using official NeurIPS/ICLR styles & TikZ figures',
+        'Master the OpenReview peer review process, formulate winning rebuttals, and release reproducible code',
+      ];
+    }
     if (course.category?.slug?.includes('database')) {
       return [
         'Master 1NF, 2NF, 3NF, and BCNF normalization to eliminate data anomalies',
@@ -189,6 +197,7 @@ const CourseDetail = () => {
       'Build responsive Single Page Applications with React and design tokens',
     ];
   };
+
 
   // Extract official docs links from lesson resources if present
   const docResources = [];

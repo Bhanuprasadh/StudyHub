@@ -65,12 +65,14 @@ const CourseCatalog = () => {
   };
 
   const getCategoryIcon = (slug) => {
+    if (slug?.includes('ai') || slug?.includes('research')) return <Sparkles size={15} />;
     if (slug?.includes('database')) return <Database size={15} />;
     if (slug?.includes('ui-ux')) return <Palette size={15} />;
     if (slug?.includes('cloud') || slug?.includes('devops')) return <Cloud size={15} />;
     if (slug?.includes('security') || slug?.includes('system')) return <Shield size={15} />;
     return <Layers size={15} />;
   };
+
 
   const getDifficultyBadge = (level) => {
     switch (level?.toLowerCase()) {
@@ -439,24 +441,67 @@ const CourseCatalog = () => {
                     </span>
                   </div>
 
-                  {/* Bottom Image Stats (Rating) */}
+                  {/* Bottom Image Stats (Rating & Price) */}
                   <div
                     style={{
                       position: 'absolute',
                       bottom: '10px',
                       left: '12px',
+                      right: '12px',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '0.35rem',
-                      color: '#fef08a',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
+                      justifyContent: 'space-between',
                     }}
                   >
-                    <Star size={13} fill="#facc15" color="#facc15" /> 4.9
-                    <span style={{ color: '#cbd5e1', fontWeight: 500 }}>(120+ reviews)</span>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        color: '#fef08a',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                      }}
+                    >
+                      <Star size={13} fill="#facc15" color="#facc15" /> 4.9
+                      <span style={{ color: '#cbd5e1', fontWeight: 500 }}>(120+ reviews)</span>
+                    </div>
+
+                    {course.price > 0 ? (
+                      <span
+                        style={{
+                          background: 'rgba(99, 102, 241, 0.85)',
+                          backdropFilter: 'blur(6px)',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          padding: '0.15rem 0.55rem',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '0.72rem',
+                          fontWeight: 800,
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        Premium ₹{course.price}
+                      </span>
+                    ) : (
+                      <span
+                        style={{
+                          background: 'rgba(16, 185, 129, 0.85)',
+                          backdropFilter: 'blur(6px)',
+                          color: '#ffffff',
+                          border: '1px solid rgba(255, 255, 255, 0.3)',
+                          padding: '0.15rem 0.55rem',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                        }}
+                      >
+                        Free Track
+                      </span>
+                    )}
                   </div>
                 </div>
+
 
                 {/* Course Card Body */}
                 <div style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', flex: 1 }}>
