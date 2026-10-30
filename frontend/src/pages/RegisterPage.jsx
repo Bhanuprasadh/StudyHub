@@ -19,8 +19,24 @@ const RegisterPage = () => {
     e.preventDefault();
     setError('');
 
-    if (password.length < 6) {
-      setError('Password must contain at least 6 characters.');
+    if (password.length < 8) {
+      setError('Password must contain at least 8 characters.');
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError('Password must contain at least one uppercase letter (A-Z).');
+      return;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError('Password must contain at least one lowercase letter (a-z).');
+      return;
+    }
+    if (!/\d/.test(password)) {
+      setError('Password must contain at least one number (0-9).');
+      return;
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      setError('Password must contain at least one special character (e.g. @, #, $, !).');
       return;
     }
 
@@ -35,8 +51,20 @@ const RegisterPage = () => {
       }
     } catch (err) {
       console.error('Registration failed:', err);
-      const detail = err.response?.data?.detail || 'Registration failed. Please check your information.';
-      setError(detail);
+      let errorMsg = 'Registration failed. Please check your information.';
+      if (err.response?.data?.detail) {
+        const d = err.response.data.detail;
+        if (typeof d === 'string') {
+          errorMsg = d;
+        } else if (Array.isArray(d)) {
+          errorMsg = d.map(item => (typeof item === 'string' ? item : (item.msg?.replace(/^Value error,\s*/i, '') || JSON.stringify(item)))).join(' ');
+        } else if (typeof d === 'object') {
+          errorMsg = d.message || d.msg?.replace(/^Value error,\s*/i, '') || JSON.stringify(d);
+        }
+      } else if (err.message === 'Network Error') {
+        errorMsg = 'Cannot connect to backend server. Make sure VITE_API_BASE_URL is configured in Vercel.';
+      }
+      setError(errorMsg);
     } finally {
       setSubmitting(false);
     }
@@ -105,7 +133,7 @@ const RegisterPage = () => {
 
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-              <label className="form-label" htmlFor="password" style={{ marginBottom: 0 }}>Password (min 6 characters)</label>
+              <label className="form-label" htmlFor="password" style={{ marginBottom: 0 }}>Password (min 8 characters)</label>
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
@@ -130,11 +158,14 @@ const RegisterPage = () => {
               className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••••••"
+              placeholder="e.g. Student@2026"
               required
-              minLength={6}
+              minLength={8}
               autoComplete="new-password"
             />
+            <small style={{ color: 'var(--text-secondary)', fontSize: '0.78rem', display: 'block', marginTop: '0.35rem' }}>
+              Must include uppercase, lowercase, number, and special character (e.g. <code>Student@123</code>).
+            </small>
           </div>
 
           <div className="form-group">
