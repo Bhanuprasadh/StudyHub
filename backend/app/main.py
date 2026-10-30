@@ -180,3 +180,9 @@ app.include_router(bookmarks.router, prefix=api_v1_prefix)
 app.include_router(notifications.router, prefix=api_v1_prefix)
 app.include_router(payments.router, prefix=api_v1_prefix)
 app.include_router(admin.router, prefix=api_v1_prefix)
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="127.0.0.1", port=8000, reload=True)
+
