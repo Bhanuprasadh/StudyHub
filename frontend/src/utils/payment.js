@@ -56,8 +56,11 @@ export const processCourseEnrollment = async ({
 
     // Step 2: Attempt standard Razorpay Checkout Modal
     const scriptLoaded = await loadRazorpayScript();
+    const isSandboxOrder =
+      orderData.order_id?.startsWith('order_demo_') ||
+      orderData.key_id?.startsWith('rzp_test_studyhub');
 
-    if (scriptLoaded && window.Razorpay && !orderData.key_id.startsWith('rzp_test_studyhub')) {
+    if (scriptLoaded && window.Razorpay && !isSandboxOrder) {
       const options = {
         key: orderData.key_id,
         amount: orderData.amount_paise,
