@@ -620,3 +620,28 @@ input, textarea, select {
   gap: 1rem;
 }
 
+/* ==========================================================================
+   PRINT MEDIA RULES FOR OFFICIAL TAX INVOICES & RECEIPTS
+   ========================================================================== */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  header, footer, nav, .sidebar, .no-print {
+    display: none !important;
+  }
+  .invoice-modal-overlay {
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+  .invoice-container {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+}
+

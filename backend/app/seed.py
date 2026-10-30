@@ -90,6 +90,9 @@ def seed_database(custom_db=None):
             Base.metadata.create_all(bind=bind)
             try:
                 db.execute(text("ALTER TABLE courses ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0;"))
+                db.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS payment_method VARCHAR(50) DEFAULT 'card';"))
+                db.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS bank_or_vpa VARCHAR(100);"))
+                db.execute(text("ALTER TABLE payments ADD COLUMN IF NOT EXISTS invoice_number VARCHAR(100);"))
                 db.commit()
             except Exception:
                 pass
@@ -2449,6 +2452,9 @@ Upon acceptance, prepare your camera-ready release:
                 currency="INR",
                 status="paid",
                 receipt="rcpt_seed_101",
+                payment_method="card",
+                bank_or_vpa="Visa **** 4242",
+                invoice_number="INV-2026-0001",
             ))
 
         db.commit()

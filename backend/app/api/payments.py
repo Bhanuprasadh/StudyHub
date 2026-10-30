@@ -1,4 +1,7 @@
+import uuid
+import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from app.database import get_db
@@ -8,7 +11,13 @@ from app.models.course import Course
 from app.models.enrollment import Enrollment
 from app.models.payment import Payment
 from app.models.notification import Notification
-from app.schemas.payment import OrderCreateRequest, OrderResponse, PaymentVerifyRequest, PaymentTransactionResponse
+from app.schemas.payment import (
+    OrderCreateRequest,
+    OrderResponse,
+    PaymentVerifyRequest,
+    PaymentTransactionResponse,
+    InvoiceResponse,
+)
 from app.services.payment import create_order, verify_payment_signature
 from app.services.email import send_enrollment_email
 from app.api.deps import get_current_user
@@ -58,6 +67,7 @@ def create_payment_order(
     )
 
     # Save payment record to database in 'created' state
+    inv_num = f"INV-{datetime.datetime.now().year}-{uuid.uuid4().hex[:8].upper()}"
     payment = Payment(
         user_id=current_user.id,
         course_id=course.id,
@@ -67,6 +77,7 @@ def create_payment_order(
         currency=order_data["currency"],
         status="created",
         receipt=order_data["receipt"],
+        invoice_number=inv_num,
     )
     db.add(payment)
     db.commit()
@@ -92,7 +103,7 @@ def verify_payment(
     current_user: User = Depends(get_current_user)
 ):
     """
-    Verify Razorpay payment signature and complete enrollment.
+    Verify Razorpay payment signature, record payment method & bank details, and complete enrollment.
     """
     course = db.query(Course).filter(Course.id == request.course_id).first()
     if not course:
@@ -107,12 +118,20 @@ def verify_payment(
     if not is_valid:
         raise HTTPException(status_code=400, detail="Invalid payment signature. Verification failed.")
 
+    payment_method = request.payment_method or "card"
+    bank_or_vpa = request.bank_or_vpa
+    inv_num = f"INV-{datetime.datetime.now().year}-{uuid.uuid4().hex[:8].upper()}"
+
     # Find or update payment record
     payment = db.query(Payment).filter(Payment.order_id == request.razorpay_order_id).first()
     if payment:
         payment.payment_id = request.razorpay_payment_id
         payment.signature = request.razorpay_signature
         payment.status = "paid"
+        payment.payment_method = payment_method
+        payment.bank_or_vpa = bank_or_vpa
+        if not payment.invoice_number:
+            payment.invoice_number = inv_num
     else:
         payment = Payment(
             user_id=current_user.id,
@@ -125,6 +144,9 @@ def verify_payment(
             currency="INR",
             status="paid",
             receipt=f"rcpt_{request.razorpay_payment_id}",
+            payment_method=payment_method,
+            bank_or_vpa=bank_or_vpa,
+            invoice_number=inv_num,
         )
         db.add(payment)
 
@@ -146,7 +168,7 @@ def verify_payment(
     notif = Notification(
         user_id=current_user.id,
         title="Payment & Enrollment Confirmed",
-        message=f"Payment for '{course.title}' was confirmed (Txn: {request.razorpay_payment_id}). Happy learning!",
+        message=f"Payment for '{course.title}' was confirmed via {payment_method.upper()} (Txn: {request.razorpay_payment_id}). Happy learning!",
     )
     db.add(notif)
     db.commit()
@@ -159,6 +181,9 @@ def verify_payment(
         "amount": payment.amount if payment else (course.price or 499),
         "order_id": request.razorpay_order_id,
         "payment_id": request.razorpay_payment_id,
+        "payment_method": payment.payment_method,
+        "bank_or_vpa": payment.bank_or_vpa,
+        "invoice_number": payment.invoice_number or f"INV-2026-{payment.id:04d}",
     }
     background_tasks.add_task(
         send_enrollment_email,
@@ -176,6 +201,10 @@ def verify_payment(
         "course_id": course.id,
         "payment_id": request.razorpay_payment_id,
         "order_id": request.razorpay_order_id,
+        "amount": payment.amount,
+        "payment_method": payment.payment_method,
+        "bank_or_vpa": payment.bank_or_vpa,
+        "invoice_number": payment.invoice_number,
     }
 
 
@@ -199,8 +228,53 @@ def get_my_transactions(
             "currency": p.currency,
             "status": p.status,
             "receipt": p.receipt,
+            "payment_method": p.payment_method or "card",
+            "bank_or_vpa": p.bank_or_vpa,
+            "invoice_number": p.invoice_number or f"INV-2026-{p.id:04d}",
             "course_id": p.course_id,
             "course_title": p.course.title if p.course else "Course",
             "created_at": p.created_at,
         })
     return results
+
+
+@router.get("/invoice/{invoice_or_payment_id}", response_model=InvoiceResponse)
+def get_payment_invoice(
+    invoice_or_payment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Retrieve full official tax invoice details for a verified payment."""
+    conditions = [
+        Payment.invoice_number == invoice_or_payment_id,
+        Payment.payment_id == invoice_or_payment_id,
+        Payment.order_id == invoice_or_payment_id
+    ]
+    if invoice_or_payment_id.isdigit():
+        conditions.append(Payment.id == int(invoice_or_payment_id))
+    payment = db.query(Payment).filter(or_(*conditions)).first()
+    if not payment:
+        raise HTTPException(status_code=404, detail="Invoice or payment transaction not found")
+
+    if current_user.role != "admin" and payment.user_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to view this invoice")
+
+    inv_num = payment.invoice_number or f"INV-2026-{payment.id:04d}"
+    return {
+        "invoice_number": inv_num,
+        "order_id": payment.order_id,
+        "payment_id": payment.payment_id or "N/A",
+        "course_id": payment.course_id,
+        "course_title": payment.course.title if payment.course else "Academic Course",
+        "student_name": payment.user.full_name if payment.user else current_user.full_name,
+        "student_email": payment.user.email if payment.user else current_user.email,
+        "amount": payment.amount,
+        "tax_amount": 0,
+        "total_amount": payment.amount,
+        "currency": payment.currency,
+        "payment_method": payment.payment_method or "card",
+        "bank_or_vpa": payment.bank_or_vpa,
+        "status": payment.status,
+        "issued_at": payment.created_at,
+    }
+

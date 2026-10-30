@@ -82,7 +82,64 @@ def test_verify_payment_success_and_transactions(client, student2_token):
     assert tx_res.status_code == 200
     txs = tx_res.json()
     assert len(txs) > 0
-    assert any(t["order_id"] == order_id for t in txs)
+    matched = next(t for t in txs if t["order_id"] == order_id)
+    assert matched is not None
+    assert "invoice_number" in matched
+
+
+def test_verify_payment_multimethod_and_invoice(client, student2_token):
+    # Test UPI payment verification
+    client.delete("/api/v1/enrollments/courses/4", headers={"Authorization": f"Bearer {student2_token}"})
+
+    order_res = client.post(
+        "/api/v1/payments/create-order",
+        headers={"Authorization": f"Bearer {student2_token}"},
+        json={"course_id": 4}
+    )
+    assert order_res.status_code == 200
+    order_id = order_res.json()["order_id"]
+    payment_id = "pay_upi_test_8888"
+    sig = generate_sandbox_signature(order_id, payment_id)
+
+    verify_res = client.post(
+        "/api/v1/payments/verify",
+        headers={"Authorization": f"Bearer {student2_token}"},
+        json={
+            "course_id": 4,
+            "razorpay_order_id": order_id,
+            "razorpay_payment_id": payment_id,
+            "razorpay_signature": sig,
+            "payment_method": "upi",
+            "bank_or_vpa": "student@okhdfcbank"
+        }
+    )
+    assert verify_res.status_code == 200
+    data = verify_res.json()
+    assert data["payment_method"] == "upi"
+    assert data["bank_or_vpa"] == "student@okhdfcbank"
+    assert "invoice_number" in data
+    inv_num = data["invoice_number"]
+
+    # Test Invoice Retrieval via invoice_number
+    inv_res = client.get(
+        f"/api/v1/payments/invoice/{inv_num}",
+        headers={"Authorization": f"Bearer {student2_token}"}
+    )
+    assert inv_res.status_code == 200
+    inv = inv_res.json()
+    assert inv["invoice_number"] == inv_num
+    assert inv["payment_method"] == "upi"
+    assert inv["bank_or_vpa"] == "student@okhdfcbank"
+    assert inv["amount"] > 0
+    assert inv["status"] == "paid"
+
+    # Test Invoice Retrieval via payment_id
+    inv_by_pay = client.get(
+        f"/api/v1/payments/invoice/{payment_id}",
+        headers={"Authorization": f"Bearer {student2_token}"}
+    )
+    assert inv_by_pay.status_code == 200
+    assert inv_by_pay.json()["invoice_number"] == inv_num
 
 
 def test_jwt_refresh_flow(client):

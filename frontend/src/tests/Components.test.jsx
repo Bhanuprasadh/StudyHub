@@ -97,6 +97,87 @@ Here is code implementation.
     expect(screen.getByPlaceholderText(/name@studyhub.edu/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Send Recovery Instructions/i })).toBeInTheDocument();
   });
+
+  it('renders PaymentModal with multi-instrument tabs (Cards, UPI, Netbanking, Wallets)', async () => {
+    const { default: PaymentModal } = await import('../components/PaymentModal');
+    const mockCourse = { id: 6, title: 'AI Research Methodology', price: 999 };
+    const mockOrder = { order_id: 'order_test_12345', amount: 999, currency: 'INR' };
+    const mockUser = { full_name: 'Bhanu Prasadh', email: 'bhanuprasadh004@gmail.com' };
+
+    render(
+      <PaymentModal
+        isOpen={true}
+        onClose={() => {}}
+        course={mockCourse}
+        orderData={mockOrder}
+        user={mockUser}
+        onSuccess={() => {}}
+      />
+    );
+
+    // Header & Currency
+    expect(screen.getByText('RAZORPAY')).toBeInTheDocument();
+    expect(screen.getByText('AI Research Methodology')).toBeInTheDocument();
+    expect(screen.getByText('₹999.00')).toBeInTheDocument();
+
+    // Tabs
+    expect(screen.getByRole('button', { name: /cards/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /upi \/ qr/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /netbanking/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /wallets/i })).toBeInTheDocument();
+
+    // Cards tab active by default
+    expect(screen.getByText('Cardholder Name')).toBeInTheDocument();
+    expect(screen.getByText('Visa (Success)')).toBeInTheDocument();
+
+    // Switch to UPI tab
+    fireEvent.click(screen.getByRole('button', { name: /upi \/ qr/i }));
+    expect(screen.getByText(/Scan with GPay, PhonePe, Paytm, BHIM, or any UPI App/i)).toBeInTheDocument();
+
+    // Switch to Netbanking tab
+    fireEvent.click(screen.getByRole('button', { name: /netbanking/i }));
+    expect(screen.getAllByText('HDFC Bank').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('State Bank of India').length).toBeGreaterThanOrEqual(1);
+
+    // Switch to Wallets tab
+    fireEvent.click(screen.getByRole('button', { name: /wallets/i }));
+    expect(screen.getByText('Paytm Wallet')).toBeInTheDocument();
+    expect(screen.getByText('PhonePe Wallet')).toBeInTheDocument();
+  });
+
+  it('renders InvoiceModal with official tax receipt, student credentials, and GST breakdown', async () => {
+    const { default: InvoiceModal } = await import('../components/InvoiceModal');
+    const sampleInvoice = {
+      invoice_number: 'INV-2026-TEST99',
+      order_id: 'order_test_99',
+      payment_id: 'pay_test_99',
+      course_title: 'AI Research Methodology',
+      student_name: 'Bhanu Prasadh',
+      student_email: 'bhanuprasadh004@gmail.com',
+      amount: 999,
+      total_amount: 999,
+      payment_method: 'upi',
+      bank_or_vpa: 'bhanu@okhdfcbank',
+      status: 'paid',
+      issued_at: '2026-10-31T00:00:00Z',
+    };
+
+    render(
+      <InvoiceModal
+        isOpen={true}
+        onClose={() => {}}
+        initialData={sampleInvoice}
+      />
+    );
+
+    expect(screen.getByText('INV-2026-TEST99')).toBeInTheDocument();
+    expect(screen.getByText('Bhanu Prasadh')).toBeInTheDocument();
+    expect(screen.getByText('bhanuprasadh004@gmail.com')).toBeInTheDocument();
+    expect(screen.getByText('36AAACH7409R1ZZ', { exact: false })).toBeInTheDocument();
+    expect(screen.getByText('Educational GST (Exempted 0%):')).toBeInTheDocument();
+    expect(screen.getByText('₹999.00 INR')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Print \/ Save PDF/i })).toBeInTheDocument();
+  });
 });
 
 

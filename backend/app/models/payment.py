@@ -18,6 +18,9 @@ class Payment(Base):
     currency = Column(String(10), default="INR", nullable=False)
     status = Column(String(50), default="created", nullable=False, index=True)  # created, paid, failed, refunded
     receipt = Column(String(100), nullable=True)
+    payment_method = Column(String(50), default="card", nullable=True)  # card, upi, netbanking, wallet
+    bank_or_vpa = Column(String(100), nullable=True)  # e.g., "HDFC Bank", "user@okhdfcbank", "Visa **** 4242"
+    invoice_number = Column(String(100), nullable=True, unique=True, index=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
 

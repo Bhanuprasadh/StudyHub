@@ -15,13 +15,20 @@ import {
   FileQuestion,
   CreditCard,
   Receipt,
+  QrCode,
+  Building2,
+  Wallet,
+  FileText,
 } from 'lucide-react';
+import InvoiceModal from '../components/InvoiceModal';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   useEffect(() => {
     fetchDashboard();
@@ -240,10 +247,10 @@ const StudentDashboard = () => {
             </div>
             <div>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
-                Razorpay Payment Receipts & Billing
+                Razorpay Payment Receipts & Tax Invoices
               </h2>
               <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                Official transaction statements and course enrollment receipts
+                Official transaction statements, payment mode breakdowns, and GST invoices
               </span>
             </div>
           </div>
@@ -263,43 +270,145 @@ const StudentDashboard = () => {
               <table className="lesson-table" style={{ margin: 0 }}>
                 <thead>
                   <tr>
-                    <th>Receipt ID</th>
-                    <th>Course Title</th>
+                    <th>Invoice No.</th>
+                    <th>Course Track</th>
                     <th>Amount (INR)</th>
-                    <th>Razorpay Payment ID</th>
-                    <th>Order Reference</th>
+                    <th>Payment Method</th>
+                    <th>Account / Channel</th>
+                    <th>Transaction Ref</th>
                     <th>Status</th>
                     <th>Date</th>
+                    <th style={{ textAlign: 'center' }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {transactions.map((tx) => (
-                    <tr key={tx.id}>
-                      <td><code style={{ fontSize: '0.78rem' }}>{tx.receipt || `rcpt_${tx.id}`}</code></td>
-                      <td><strong>{tx.course_title}</strong></td>
-                      <td><strong style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>₹{tx.amount} INR</strong></td>
-                      <td><code style={{ fontSize: '0.78rem' }}>{tx.payment_id || 'N/A'}</code></td>
-                      <td><code style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tx.order_id}</code></td>
-                      <td>
-                        <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.72rem' }}>
-                          <CheckCircle size={11} /> Paid
-                        </span>
-                      </td>
-                      <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                        {new Date(tx.created_at).toLocaleDateString(undefined, {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                        })}
-                      </td>
-                    </tr>
-                  ))}
+                  {transactions.map((tx) => {
+                    const method = tx.payment_method?.toLowerCase() || 'card';
+                    return (
+                      <tr key={tx.id}>
+                        <td>
+                          <strong style={{ fontSize: '0.8rem', color: 'var(--primary)' }}>
+                            {tx.invoice_number || `INV-2026-${tx.id.toString().padStart(4, '0')}`}
+                          </strong>
+                        </td>
+                        <td>
+                          <strong>{tx.course_title}</strong>
+                        </td>
+                        <td>
+                          <strong style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>₹{tx.amount} INR</strong>
+                        </td>
+                        <td>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                              padding: '2px 8px',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              background:
+                                method === 'upi'
+                                  ? 'rgba(79, 70, 229, 0.1)'
+                                  : method === 'netbanking'
+                                  ? 'rgba(2, 132, 199, 0.1)'
+                                  : method === 'wallet'
+                                  ? 'rgba(16, 185, 129, 0.1)'
+                                  : 'rgba(234, 88, 12, 0.1)',
+                              color:
+                                method === 'upi'
+                                  ? '#4f46e5'
+                                  : method === 'netbanking'
+                                  ? '#0284c7'
+                                  : method === 'wallet'
+                                  ? '#059669'
+                                  : '#ea580c',
+                            }}
+                          >
+                            {method === 'upi' && <QrCode size={11} />}
+                            {method === 'netbanking' && <Building2 size={11} />}
+                            {method === 'wallet' && <Wallet size={11} />}
+                            {method === 'card' && <CreditCard size={11} />}
+                            {method}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                          {tx.bank_or_vpa || 'Visa / Mastercard'}
+                        </td>
+                        <td>
+                          <code style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                            {tx.payment_id || tx.order_id}
+                          </code>
+                        </td>
+                        <td>
+                          <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.72rem' }}>
+                            <CheckCircle size={11} /> Paid
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                          {new Date(tx.created_at).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedInvoice(tx);
+                              setShowInvoiceModal(true);
+                            }}
+                            className="btn btn-outline btn-sm"
+                            style={{
+                              fontSize: '0.72rem',
+                              padding: '3px 8px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                            title="View / Print Official Tax Invoice"
+                          >
+                            <FileText size={12} /> Invoice
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           </div>
         )}
       </div>
+
+      {/* Tax Invoice Modal */}
+      {showInvoiceModal && selectedInvoice && (
+        <InvoiceModal
+          isOpen={showInvoiceModal}
+          onClose={() => {
+            setShowInvoiceModal(false);
+            setSelectedInvoice(null);
+          }}
+          invoiceId={selectedInvoice.invoice_number || selectedInvoice.payment_id}
+          initialData={{
+            invoice_number: selectedInvoice.invoice_number || `INV-2026-${selectedInvoice.id.toString().padStart(4, '0')}`,
+            order_id: selectedInvoice.order_id,
+            payment_id: selectedInvoice.payment_id,
+            course_id: selectedInvoice.course_id,
+            course_title: selectedInvoice.course_title,
+            student_name: user?.full_name || 'Enrolled Scholar',
+            student_email: user?.email || '',
+            amount: selectedInvoice.amount,
+            total_amount: selectedInvoice.amount,
+            payment_method: selectedInvoice.payment_method || 'card',
+            bank_or_vpa: selectedInvoice.bank_or_vpa,
+            status: selectedInvoice.status || 'paid',
+            issued_at: selectedInvoice.created_at,
+          }}
+        />
+      )}
     </div>
   );
 };

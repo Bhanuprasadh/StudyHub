@@ -69,6 +69,32 @@ export const processCourseEnrollment = async ({
           name: user?.full_name || '',
           email: user?.email || '',
         },
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: 'UPI / QR',
+                instruments: [{ method: 'upi' }],
+              },
+              card: {
+                name: 'Credit & Debit Cards',
+                instruments: [{ method: 'card' }],
+              },
+              netbanking: {
+                name: 'Netbanking',
+                instruments: [{ method: 'netbanking' }],
+              },
+              wallet: {
+                name: 'Wallets',
+                instruments: [{ method: 'wallet' }],
+              },
+            },
+            sequence: ['block.upi', 'block.card', 'block.netbanking', 'block.wallet'],
+            preferences: {
+              show_default_blocks: true,
+            },
+          },
+        },
         theme: {
           color: '#4f46e5',
         },
@@ -79,6 +105,8 @@ export const processCourseEnrollment = async ({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
+              payment_method: response.razorpay_payment_method || 'card',
+              bank_or_vpa: response.razorpay_vpa || response.razorpay_bank || null,
             });
             onSuccess({
               isFree: false,

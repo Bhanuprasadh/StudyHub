@@ -147,19 +147,26 @@ def send_enrollment_email(to_email: str, full_name: str, course_title: str, cour
         amount_inr = payment_info.get("amount", 0)
         order_id = payment_info.get("order_id", "N/A")
         payment_id = payment_info.get("payment_id", "Free Enrollment")
+        payment_method = payment_info.get("payment_method", "card").upper()
+        bank_or_vpa = payment_info.get("bank_or_vpa") or "Secure Online Transaction"
+        invoice_num = payment_info.get("invoice_number", f"INV-2026-{order_id[-6:]}")
         payment_receipt_html = f"""
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin: 20px 0;">
             <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #0284c7; margin-bottom: 8px;">
-                💳 Razorpay Payment Receipt
+                💳 Razorpay Payment & Tax Receipt
             </div>
             <table width="100%" style="font-size: 13px; color: #334155; line-height: 1.8;">
-                <tr><td><strong>Amount Paid:</strong></td><td align="right">₹{amount_inr} INR</td></tr>
-                <tr><td><strong>Payment ID:</strong></td><td align="right"><code>{payment_id}</code></td></tr>
-                <tr><td><strong>Order ID:</strong></td><td align="right"><code>{order_id}</code></td></tr>
-                <tr><td><strong>Status:</strong></td><td align="right"><span style="color: #10b981; font-weight: 700;">Captured / Confirmed</span></td></tr>
+                <tr><td><strong>Invoice Number:</strong></td><td align="right"><code style="color: #4f46e5; font-weight: 700;">{invoice_num}</code></td></tr>
+                <tr><td><strong>Amount Paid:</strong></td><td align="right"><strong>₹{amount_inr} INR</strong></td></tr>
+                <tr><td><strong>Payment Mode:</strong></td><td align="right"><span style="background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700;">{payment_method}</span></td></tr>
+                <tr><td><strong>Channel / Account:</strong></td><td align="right">{bank_or_vpa}</td></tr>
+                <tr><td><strong>Razorpay Payment ID:</strong></td><td align="right"><code>{payment_id}</code></td></tr>
+                <tr><td><strong>Order Reference:</strong></td><td align="right"><code>{order_id}</code></td></tr>
+                <tr><td><strong>Transaction Status:</strong></td><td align="right"><span style="color: #10b981; font-weight: 700;">Captured / Confirmed</span></td></tr>
             </table>
         </div>
         """
+
 
     html_body = f"""
     <h2 style="color: #0f172a; font-size: 18px; margin-top: 0; font-weight: 700;">Congratulations, {full_name}!</h2>

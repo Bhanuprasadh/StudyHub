@@ -28,6 +28,8 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { processCourseEnrollment } from '../utils/payment';
+import PaymentModal from '../components/PaymentModal';
+import InvoiceModal from '../components/InvoiceModal';
 
 const CourseDetail = () => {
   const { id } = useParams();
@@ -42,6 +44,7 @@ const CourseDetail = () => {
   const [sandboxModal, setSandboxModal] = useState(null);
   const [paymentSuccess, setPaymentSuccess] = useState(null);
   const [paymentError, setPaymentError] = useState('');
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
 
   useEffect(() => {
     fetchCourseData();
@@ -95,28 +98,6 @@ const CourseDetail = () => {
     if (res && res.isSandbox) {
       setEnrolling(false);
       setSandboxModal(res.orderData);
-    }
-  };
-
-  const handleConfirmSandboxPayment = async () => {
-    if (!sandboxModal) return;
-    setEnrolling(true);
-    try {
-      const mockPaymentId = `pay_demo_${Date.now().toString().slice(-8)}`;
-      const mockSignature = `demo_sig_${Date.now()}`;
-      const verifyRes = await apiClient.post('/payments/verify', {
-        course_id: course.id,
-        razorpay_order_id: sandboxModal.order_id,
-        razorpay_payment_id: mockPaymentId,
-        razorpay_signature: mockSignature,
-      });
-      setSandboxModal(null);
-      setCourse((prev) => ({ ...prev, is_enrolled: true }));
-      setPaymentSuccess(verifyRes.data);
-    } catch (err) {
-      setPaymentError(err.response?.data?.detail || 'Sandbox payment verification failed');
-    } finally {
-      setEnrolling(false);
     }
   };
 
@@ -924,105 +905,26 @@ const CourseDetail = () => {
         </div>
       </div>
 
-      {/* Razorpay Interactive Checkout Modal (Sandbox / Test Mode Dialog) */}
+      {/* Razorpay Multi-Method Payment Gateway Modal */}
       {sandboxModal && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.75)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
+        <PaymentModal
+          isOpen={Boolean(sandboxModal)}
+          onClose={() => setSandboxModal(null)}
+          course={course}
+          orderData={sandboxModal}
+          user={user}
+          onSuccess={(verifiedData) => {
+            setSandboxModal(null);
+            setCourse((prev) => ({ ...prev, is_enrolled: true }));
+            setPaymentSuccess(verifiedData);
           }}
-        >
-          <div
-            className="card"
-            style={{
-              width: '100%',
-              maxWidth: '460px',
-              padding: 0,
-              overflow: 'hidden',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
-              border: '1px solid #4f46e5',
-            }}
-          >
-            {/* Modal Header with Razorpay Branding */}
-            <div style={{ background: 'linear-gradient(135deg, #020617 0%, #1e1b4b 100%)', padding: '1.5rem', color: '#ffffff' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <div style={{ background: '#3b82f6', borderRadius: '4px', padding: '3px 8px', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.05em' }}>
-                    RAZORPAY
-                  </div>
-                  <span style={{ fontSize: '0.85rem', color: '#93c5fd', fontWeight: 600 }}>Checkout Gateway</span>
-                </div>
-                <button
-                  onClick={() => setSandboxModal(null)}
-                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div style={{ marginTop: '1.25rem' }}>
-                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Order Total</div>
-                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
-                  ₹{sandboxModal.amount}.00 <span style={{ fontSize: '0.9rem', color: '#38bdf8' }}>INR</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Body: Course & Billing Info */}
-            <div style={{ padding: '1.5rem' }}>
-              <div style={{ background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1rem', marginBottom: '1.25rem' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>
-                  Course Enrollment
-                </div>
-                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
-                  {course.title}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                  Order ID: <code>{sandboxModal.order_id}</code>
-                </div>
-              </div>
-
-              <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                <p style={{ margin: '0 0 0.5rem 0' }}>
-                  <strong>Student:</strong> {user?.full_name || 'Enrolled Student'} ({user?.email})
-                </p>
-                <p style={{ margin: 0, color: '#059669', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Shield size={14} /> Instant verification • Automated email receipt upon completion
-                </p>
-              </div>
-
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button
-                  type="button"
-                  onClick={() => setSandboxModal(null)}
-                  className="btn btn-secondary"
-                  style={{ flex: 1, justifyContent: 'center' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleConfirmSandboxPayment}
-                  disabled={enrolling}
-                  className="btn btn-primary"
-                  style={{ flex: 2, justifyContent: 'center', background: 'linear-gradient(135deg, #4f46e5, #0ea5e9)' }}
-                >
-                  {enrolling ? 'Verifying...' : `Pay ₹${sandboxModal.amount} (Simulate)`}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+          onError={(err) => {
+            setPaymentError(err);
+          }}
+        />
       )}
 
-      {/* Payment Success Dialog */}
+      {/* Payment Success Dialog with Invoice Link */}
       {paymentSuccess && (
         <div
           style={{
@@ -1041,51 +943,133 @@ const CourseDetail = () => {
             className="card"
             style={{
               width: '100%',
-              maxWidth: '460px',
-              padding: '2rem',
+              maxWidth: '480px',
+              padding: '2.25rem 2rem',
               textAlign: 'center',
               boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
             }}
           >
             <div
               style={{
-                width: '60px',
-                height: '60px',
+                width: '64px',
+                height: '64px',
                 borderRadius: '50%',
                 background: '#ecfdf5',
                 color: '#10b981',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '1rem',
+                marginBottom: '1.25rem',
               }}
             >
-              <CheckCircle size={32} />
+              <CheckCircle size={36} />
             </div>
 
-            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>
+            <h3 style={{ fontSize: '1.45rem', fontWeight: 800, margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>
               Enrollment Confirmed!
             </h3>
             <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-              Your enrollment in <strong>{course.title}</strong> is active. An official confirmation email with your transaction receipt has been dispatched.
+              Your enrollment in <strong>{course.title}</strong> is active. An official confirmation email with your detailed tax receipt has been dispatched.
             </p>
 
-            {paymentSuccess.payment_id && (
-              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', textAlign: 'left' }}>
-                <div><strong>Transaction ID:</strong> <code>{paymentSuccess.payment_id}</code></div>
-                <div><strong>Order ID:</strong> <code>{paymentSuccess.order_id}</code></div>
-              </div>
-            )}
-
-            <button
-              onClick={() => navigate(`/learn/${course.id}`)}
-              className="btn btn-primary"
-              style={{ width: '100%', justifyContent: 'center', padding: '0.85rem' }}
+            {/* Transaction & Invoice Info Box */}
+            <div
+              style={{
+                background: '#f8fafc',
+                border: '1px solid var(--border-color)',
+                padding: '1rem',
+                borderRadius: 'var(--radius-md)',
+                fontSize: '0.8rem',
+                color: 'var(--text-secondary)',
+                marginBottom: '1.5rem',
+                textAlign: 'left',
+              }}
             >
-              <PlayCircle size={18} /> Enter Learning Workspace
-            </button>
+              {paymentSuccess.invoice_number && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span>Invoice Number:</span>
+                  <strong style={{ color: 'var(--primary)' }}>{paymentSuccess.invoice_number}</strong>
+                </div>
+              )}
+              {paymentSuccess.payment_id && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span>Transaction ID:</span>
+                  <code>{paymentSuccess.payment_id}</code>
+                </div>
+              )}
+              {paymentSuccess.payment_method && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+                  <span>Payment Channel:</span>
+                  <strong style={{ textTransform: 'capitalize' }}>
+                    {paymentSuccess.payment_method} {paymentSuccess.bank_or_vpa ? `(${paymentSuccess.bank_or_vpa})` : ''}
+                  </strong>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span>Order Reference:</span>
+                <code style={{ fontSize: '0.75rem' }}>{paymentSuccess.order_id}</code>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button
+                type="button"
+                onClick={() => setShowInvoiceModal(true)}
+                className="btn btn-secondary"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '0.8rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  borderColor: 'var(--primary)',
+                  color: 'var(--primary)',
+                  fontWeight: 600,
+                }}
+              >
+                <FileText size={16} /> View & Print Official Tax Invoice
+              </button>
+
+              <button
+                type="button"
+                onClick={() => navigate(`/learn/${course.id}`)}
+                className="btn btn-primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '0.85rem' }}
+              >
+                <PlayCircle size={18} /> Enter Learning Workspace
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* Tax Invoice Modal */}
+      {showInvoiceModal && (
+        <InvoiceModal
+          isOpen={showInvoiceModal}
+          onClose={() => setShowInvoiceModal(false)}
+          invoiceId={paymentSuccess?.invoice_number || paymentSuccess?.payment_id}
+          initialData={
+            paymentSuccess
+              ? {
+                  invoice_number: paymentSuccess.invoice_number || 'INV-2026-0001',
+                  order_id: paymentSuccess.order_id,
+                  payment_id: paymentSuccess.payment_id,
+                  course_id: course.id,
+                  course_title: course.title,
+                  student_name: user?.full_name || 'Enrolled Scholar',
+                  student_email: user?.email || '',
+                  amount: paymentSuccess.amount || course.price,
+                  total_amount: paymentSuccess.amount || course.price,
+                  payment_method: paymentSuccess.payment_method || 'card',
+                  bank_or_vpa: paymentSuccess.bank_or_vpa,
+                  status: 'paid',
+                  issued_at: new Date().toISOString(),
+                }
+              : null
+          }
+        />
       )}
     </div>
   );
