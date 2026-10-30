@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Dict, Any
@@ -10,6 +10,7 @@ from app.models.lesson import Lesson
 from app.models.enrollment import Enrollment
 from app.models.progress import LessonProgress
 from app.models.notification import Notification
+from app.services.email import send_enrollment_email
 from app.api.deps import get_current_user
 
 router = APIRouter(prefix="/enrollments", tags=["Enrollments"])
@@ -18,6 +19,7 @@ router = APIRouter(prefix="/enrollments", tags=["Enrollments"])
 @router.post("/courses/{course_id}", status_code=status.HTTP_201_CREATED)
 def enroll_in_course(
     course_id: int,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -50,6 +52,17 @@ def enroll_in_course(
 
     db.commit()
     db.refresh(enrollment)
+
+    # Dispatch enrollment confirmation email
+    background_tasks.add_task(
+        send_enrollment_email,
+        to_email=current_user.email,
+        full_name=current_user.full_name,
+        course_title=course.title,
+        course_id=course.id,
+        payment_info=None
+    )
+
     return {
         "message": "Enrolled successfully",
         "enrollment_id": enrollment.id,

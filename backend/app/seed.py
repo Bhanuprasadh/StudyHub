@@ -18,6 +18,7 @@ from app.models.quiz import Quiz, Question, AnswerOption, QuizAttempt, AttemptAn
 from app.models.discussion import DiscussionThread, DiscussionReply
 from app.models.bookmark import Bookmark
 from app.models.notification import Notification
+from app.models.payment import Payment
 from app.services.auth import hash_password
 
 
@@ -59,7 +60,7 @@ def get_or_create_category(db, name, slug, description, icon):
     return cat
 
 
-def sync_course(db, slug, title, short_description, description, instructor_id, category_id, level, thumbnail_url):
+def sync_course(db, slug, title, short_description, description, instructor_id, category_id, level, thumbnail_url, price=499):
     course = Course(
         title=title,
         slug=slug,
@@ -70,6 +71,7 @@ def sync_course(db, slug, title, short_description, description, instructor_id, 
         level=level,
         status="published",
         thumbnail_url=thumbnail_url,
+        price=price,
     )
     db.add(course)
     db.flush()
@@ -83,11 +85,13 @@ def seed_database():
     try:
         # Ensure all tables exist without dropping registered student accounts
         Base.metadata.create_all(bind=engine)
+        db.execute(text("ALTER TABLE courses ADD COLUMN IF NOT EXISTS price INTEGER DEFAULT 0;"))
+        db.commit()
 
         # Truncate content tables and reset their auto-increment sequences
         # NOTE: The 'users' table is NOT truncated! All registered student and instructor accounts are preserved!
         print("Synchronizing course schema and resetting curriculum sequences (preserving all registered users)...")
-        db.execute(text("TRUNCATE TABLE quiz_attempts, attempt_answers, answer_options, quiz_questions, quizzes, lesson_progress, lessons, modules, enrollments, bookmarks, discussion_replies, discussion_threads, resources, courses, categories CASCADE;"))
+        db.execute(text("TRUNCATE TABLE payments, quiz_attempts, attempt_answers, answer_options, quiz_questions, quizzes, lesson_progress, lessons, modules, enrollments, bookmarks, discussion_replies, discussion_threads, resources, courses, categories CASCADE;"))
         db.execute(text("ALTER SEQUENCE courses_id_seq RESTART WITH 1;"))
         db.execute(text("ALTER SEQUENCE modules_id_seq RESTART WITH 1;"))
         db.execute(text("ALTER SEQUENCE lessons_id_seq RESTART WITH 1;"))
@@ -95,6 +99,10 @@ def seed_database():
         db.execute(text("ALTER SEQUENCE quiz_questions_id_seq RESTART WITH 1;"))
         db.execute(text("ALTER SEQUENCE answer_options_id_seq RESTART WITH 1;"))
         db.execute(text("ALTER SEQUENCE categories_id_seq RESTART WITH 1;"))
+        try:
+            db.execute(text("ALTER SEQUENCE payments_id_seq RESTART WITH 1;"))
+        except Exception:
+            pass
         db.commit()
 
         print("Preserving registered accounts and seeding core demo users...")
@@ -208,6 +216,7 @@ Key Highlights:
             category_id=cat_fullstack.id,
             level="intermediate",
             thumbnail_url="/images/course-1-fastapi-react.jpg",
+            price=499,
         )
 
         c1_m0 = Module(course_id=course_1.id, title="Section 0: Course Roadmap & Engineering Pathway", order_index=0)
@@ -627,6 +636,7 @@ Topics covered:
             category_id=cat_database.id,
             level="advanced",
             thumbnail_url="/images/course-2-postgresql.jpg",
+            price=799,
         )
 
         c2_m0 = Module(course_id=course_2.id, title="Section 0: Course Roadmap & Relational Database Pathway", order_index=0)
@@ -929,6 +939,7 @@ We cover:
             category_id=cat_uiux.id,
             level="beginner",
             thumbnail_url="/images/course-3-uiux-design.jpg",
+            price=0,  # Free course
         )
 
         c3_m0 = Module(course_id=course_3.id, title="Section 0: Course Roadmap & Design System Pathway", order_index=0)
@@ -1152,6 +1163,7 @@ Students gain hands-on expertise with:
             category_id=cat_cloud.id,
             level="intermediate",
             thumbnail_url="/images/course-4-devops-docker.jpg",
+            price=899,
         )
 
         c4_m0 = Module(course_id=course_4.id, title="Section 0: Course Roadmap & DevOps Pathway", order_index=0)
@@ -1407,6 +1419,7 @@ Core competencies:
             category_id=cat_security.id,
             level="advanced",
             thumbnail_url="/images/course-5-system-design.jpg",
+            price=999,
         )
 
         c5_m0 = Module(course_id=course_5.id, title="Section 0: Course Roadmap & System Design Pathway", order_index=0)
@@ -1640,6 +1653,21 @@ Referrer-Policy: strict-origin-when-cross-origin
                 title="Welcome to StudyHub Academic Learning Platform",
                 message="Explore verified curricula, examine Section 0 roadmaps, and take assessments.",
                 is_read=False,
+            ))
+
+        # Ensure sample payment record for student_1
+        if not db.query(Payment).filter(Payment.user_id == student_1.id, Payment.course_id == course_1.id).first():
+            db.add(Payment(
+                user_id=student_1.id,
+                course_id=course_1.id,
+                order_id="order_demo_init101",
+                payment_id="pay_demo_init101",
+                signature="demo_sig_seed101",
+                amount=499,
+                amount_paise=49900,
+                currency="INR",
+                status="paid",
+                receipt="rcpt_seed_101",
             ))
 
         db.commit()

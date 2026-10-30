@@ -11,6 +11,7 @@ from app.models.quiz import Quiz, Question, AnswerOption, QuizAttempt, AttemptAn
 from app.models.discussion import DiscussionThread, DiscussionReply
 from app.models.bookmark import Bookmark
 from app.models.notification import Notification
+from app.models.payment import Payment
 
 __all__ = [
     "Base",
@@ -32,4 +33,5 @@ __all__ = [
     "DiscussionReply",
     "Bookmark",
     "Notification",
+    "Payment",
 ]

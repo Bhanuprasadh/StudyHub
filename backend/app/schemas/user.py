@@ -37,10 +37,26 @@ class UserResponse(BaseModel):
 
 class Token(BaseModel):
     access_token: str
+    refresh_token: Optional[str] = None
     token_type: str = "bearer"
     user: UserResponse
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=6, max_length=128)
 
 
 class TokenPayload(BaseModel):
     sub: Optional[str] = None
     role: Optional[str] = None
+    token_type: Optional[str] = None
+

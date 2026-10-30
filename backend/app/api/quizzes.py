@@ -1,5 +1,5 @@
 import datetime
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from typing import List, Optional
@@ -11,6 +11,7 @@ from app.models.enrollment import Enrollment
 from app.schemas.quiz import (
     QuizCreate, QuizPublicResponse, QuizInstructorResponse, QuizSubmission, QuizAttemptResponse, AttemptAnswerDetail
 )
+from app.services.email import send_quiz_result_email
 from app.api.deps import get_current_user, require_instructor
 
 router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
@@ -168,6 +169,7 @@ def get_quiz_for_instructor(
 def submit_quiz_attempt(
     quiz_id: int,
     submission: QuizSubmission,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -234,6 +236,18 @@ def submit_quiz_attempt(
 
     db.commit()
     db.refresh(attempt)
+
+    # Dispatch quiz result email notification
+    background_tasks.add_task(
+        send_quiz_result_email,
+        to_email=current_user.email,
+        full_name=current_user.full_name,
+        quiz_title=quiz.title,
+        score=score,
+        passed=passed,
+        passing_score=quiz.passing_score,
+        course_id=quiz.course_id
+    )
 
     return {
         "id": attempt.id,

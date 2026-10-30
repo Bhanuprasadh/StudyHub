@@ -94,6 +94,7 @@ class CourseBase(BaseModel):
     level: str = "beginner"  # beginner, intermediate, advanced
     status: str = "published"  # draft, published, archived
     thumbnail_url: Optional[str] = None
+    price: Optional[int] = 0  # In INR (0 = Free)
 
 
 class CourseCreate(CourseBase):
@@ -109,6 +110,7 @@ class CourseUpdate(BaseModel):
     level: Optional[str] = None
     status: Optional[str] = None
     thumbnail_url: Optional[str] = None
+    price: Optional[int] = None
 
 
 class CourseSummaryResponse(BaseModel):
@@ -121,6 +123,7 @@ class CourseSummaryResponse(BaseModel):
     level: str
     status: str
     thumbnail_url: Optional[str] = None
+    price: Optional[int] = 0
     created_at: datetime.datetime
     instructor: Optional[UserResponse] = None
     category: Optional[CategoryResponse] = None

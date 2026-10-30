@@ -108,23 +108,28 @@ const LoginPage = () => {
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
               <label className="form-label" htmlFor="password" style={{ marginBottom: 0 }}>Password</label>
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--text-secondary)',
-                  cursor: 'pointer',
-                  fontSize: '0.78rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem',
-                  padding: 0,
-                }}
-              >
-                {showPassword ? <><EyeOff size={14} /> Hide</> : <><Eye size={14} /> Show</>}
-              </button>
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                <Link to="/forgot-password" style={{ fontSize: '0.78rem', color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>
+                  Forgot password?
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    fontSize: '0.78rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    padding: 0,
+                  }}
+                >
+                  {showPassword ? <><EyeOff size={14} /> Hide</> : <><Eye size={14} /> Show</>}
+                </button>
+              </div>
             </div>
             <input
               id="password"

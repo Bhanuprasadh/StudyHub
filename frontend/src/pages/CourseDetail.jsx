@@ -22,11 +22,16 @@ import {
   ShieldCheck,
   Sparkles,
   FileText,
+  CreditCard,
+  Shield,
+  X,
+  AlertCircle,
 } from 'lucide-react';
+import { processCourseEnrollment } from '../utils/payment';
 
 const CourseDetail = () => {
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   const [course, setCourse] = useState(null);
@@ -34,6 +39,9 @@ const CourseDetail = () => {
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [bookmarked, setBookmarked] = useState(false);
+  const [sandboxModal, setSandboxModal] = useState(null);
+  const [paymentSuccess, setPaymentSuccess] = useState(null);
+  const [paymentError, setPaymentError] = useState('');
 
   useEffect(() => {
     fetchCourseData();
@@ -62,13 +70,51 @@ const CourseDetail = () => {
     }
 
     setEnrolling(true);
+    setPaymentError('');
+
+    const res = await processCourseEnrollment({
+      course,
+      user,
+      onOrderCreated: (order) => {
+        console.log('Razorpay order generated:', order);
+      },
+      onSuccess: (paymentData) => {
+        setEnrolling(false);
+        setCourse((prev) => ({ ...prev, is_enrolled: true }));
+        setPaymentSuccess(paymentData);
+      },
+      onError: (errMessage) => {
+        setEnrolling(false);
+        setPaymentError(errMessage);
+      },
+      onCancel: () => {
+        setEnrolling(false);
+      },
+    });
+
+    if (res && res.isSandbox) {
+      setEnrolling(false);
+      setSandboxModal(res.orderData);
+    }
+  };
+
+  const handleConfirmSandboxPayment = async () => {
+    if (!sandboxModal) return;
+    setEnrolling(true);
     try {
-      await apiClient.post(`/enrollments/courses/${course.id}`);
+      const mockPaymentId = `pay_demo_${Date.now().toString().slice(-8)}`;
+      const mockSignature = `demo_sig_${Date.now()}`;
+      const verifyRes = await apiClient.post('/payments/verify', {
+        course_id: course.id,
+        razorpay_order_id: sandboxModal.order_id,
+        razorpay_payment_id: mockPaymentId,
+        razorpay_signature: mockSignature,
+      });
+      setSandboxModal(null);
       setCourse((prev) => ({ ...prev, is_enrolled: true }));
-      navigate(`/learn/${course.id}`);
+      setPaymentSuccess(verifyRes.data);
     } catch (err) {
-      console.error('Enrollment error:', err);
-      alert(err.response?.data?.detail || 'Failed to enroll');
+      setPaymentError(err.response?.data?.detail || 'Sandbox payment verification failed');
     } finally {
       setEnrolling(false);
     }
@@ -313,6 +359,25 @@ const CourseDetail = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#93c5fd', fontSize: '0.85rem' }}>
               <Users size={14} /> <span>{course.total_enrollments || 0} enrolled students</span>
             </div>
+
+            {/* Price Badge */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.35rem 0.85rem',
+                borderRadius: '999px',
+                background: course.price > 0 ? 'rgba(79, 70, 229, 0.3)' : 'rgba(16, 185, 129, 0.3)',
+                border: '1px solid rgba(255, 255, 255, 0.25)',
+                color: '#ffffff',
+                fontWeight: 800,
+                fontSize: '0.875rem',
+              }}
+            >
+              <CreditCard size={15} />
+              <span>{course.price > 0 ? `₹${course.price} INR` : 'Free Curriculum'}</span>
+            </div>
           </div>
 
           {/* Action CTAs */}
@@ -344,7 +409,17 @@ const CourseDetail = () => {
                   gap: '0.5rem',
                 }}
               >
-                {enrolling ? 'Enrolling...' : <><PlayCircle size={20} /> Enroll in Track (Free)</>}
+                {enrolling ? (
+                  'Processing...'
+                ) : course.price > 0 ? (
+                  <>
+                    <CreditCard size={20} /> Enroll with Razorpay (₹{course.price})
+                  </>
+                ) : (
+                  <>
+                    <PlayCircle size={20} /> Enroll in Track (Free)
+                  </>
+                )}
               </button>
             )}
 
@@ -708,11 +783,24 @@ const CourseDetail = () => {
                   <span style={{ color: 'var(--text-secondary)' }}>Assessments</span>
                   <strong>{quizzes.length} Auto-Graded Quiz</strong>
                 </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Curriculum Fee</span>
+                  <strong style={{ color: course.price > 0 ? 'var(--primary)' : '#059669', fontSize: '1.05rem' }}>
+                    {course.price > 0 ? `₹${course.price} INR` : 'Free'}
+                  </strong>
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-secondary)' }}>Certification</span>
                   <strong style={{ color: '#059669' }}>Included (75% Score)</strong>
                 </div>
               </div>
+
+              {paymentError && (
+                <div style={{ padding: '0.65rem 0.85rem', background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', fontSize: '0.8rem', borderRadius: 'var(--radius-sm)', marginBottom: '1rem', display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <AlertCircle size={15} />
+                  <span>{paymentError}</span>
+                </div>
+              )}
 
               {course.is_enrolled ? (
                 <Link
@@ -729,8 +817,22 @@ const CourseDetail = () => {
                   className="btn btn-primary"
                   style={{ width: '100%', padding: '0.75rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem' }}
                 >
-                  {enrolling ? 'Enrolling...' : 'Enroll in Track (Free)'}
+                  {enrolling ? (
+                    'Processing...'
+                  ) : course.price > 0 ? (
+                    <>
+                      <CreditCard size={18} /> Pay with Razorpay (₹{course.price})
+                    </>
+                  ) : (
+                    'Enroll in Track (Free)'
+                  )}
                 </button>
+              )}
+
+              {course.price > 0 && !course.is_enrolled && (
+                <div style={{ marginTop: '0.75rem', textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                  <Shield size={13} color="#10b981" /> 256-bit encrypted • Razorpay verified
+                </div>
               )}
             </div>
 
@@ -812,6 +914,170 @@ const CourseDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Razorpay Interactive Checkout Modal (Sandbox / Test Mode Dialog) */}
+      {sandboxModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              padding: 0,
+              overflow: 'hidden',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+              border: '1px solid #4f46e5',
+            }}
+          >
+            {/* Modal Header with Razorpay Branding */}
+            <div style={{ background: 'linear-gradient(135deg, #020617 0%, #1e1b4b 100%)', padding: '1.5rem', color: '#ffffff' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{ background: '#3b82f6', borderRadius: '4px', padding: '3px 8px', fontSize: '0.75rem', fontWeight: 800, letterSpacing: '0.05em' }}>
+                    RAZORPAY
+                  </div>
+                  <span style={{ fontSize: '0.85rem', color: '#93c5fd', fontWeight: 600 }}>Checkout Gateway</span>
+                </div>
+                <button
+                  onClick={() => setSandboxModal(null)}
+                  style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div style={{ marginTop: '1.25rem' }}>
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>Order Total</div>
+                <div style={{ fontSize: '2rem', fontWeight: 800, color: '#ffffff' }}>
+                  ₹{sandboxModal.amount}.00 <span style={{ fontSize: '0.9rem', color: '#38bdf8' }}>INR</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Body: Course & Billing Info */}
+            <div style={{ padding: '1.5rem' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)', padding: '1rem', marginBottom: '1.25rem' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', fontWeight: 700, marginBottom: '0.25rem' }}>
+                  Course Enrollment
+                </div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                  {course.title}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                  Order ID: <code>{sandboxModal.order_id}</code>
+                </div>
+              </div>
+
+              <div style={{ fontSize: '0.825rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.5rem' }}>
+                <p style={{ margin: '0 0 0.5rem 0' }}>
+                  <strong>Student:</strong> {user?.full_name || 'Enrolled Student'} ({user?.email})
+                </p>
+                <p style={{ margin: 0, color: '#059669', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Shield size={14} /> Instant verification • Automated email receipt upon completion
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setSandboxModal(null)}
+                  className="btn btn-secondary"
+                  style={{ flex: 1, justifyContent: 'center' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmSandboxPayment}
+                  disabled={enrolling}
+                  className="btn btn-primary"
+                  style={{ flex: 2, justifyContent: 'center', background: 'linear-gradient(135deg, #4f46e5, #0ea5e9)' }}
+                >
+                  {enrolling ? 'Verifying...' : `Pay ₹${sandboxModal.amount} (Simulate)`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Success Dialog */}
+      {paymentSuccess && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '1rem',
+          }}
+        >
+          <div
+            className="card"
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              padding: '2rem',
+              textAlign: 'center',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            }}
+          >
+            <div
+              style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                background: '#ecfdf5',
+                color: '#10b981',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '1rem',
+              }}
+            >
+              <CheckCircle size={32} />
+            </div>
+
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '0 0 0.5rem 0', color: 'var(--text-main)' }}>
+              Enrollment Confirmed!
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
+              Your enrollment in <strong>{course.title}</strong> is active. An official confirmation email with your transaction receipt has been dispatched.
+            </p>
+
+            {paymentSuccess.payment_id && (
+              <div style={{ background: '#f8fafc', padding: '0.75rem', borderRadius: 'var(--radius-sm)', fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', textAlign: 'left' }}>
+                <div><strong>Transaction ID:</strong> <code>{paymentSuccess.payment_id}</code></div>
+                <div><strong>Order ID:</strong> <code>{paymentSuccess.order_id}</code></div>
+              </div>
+            )}
+
+            <button
+              onClick={() => navigate(`/learn/${course.id}`)}
+              className="btn btn-primary"
+              style={{ width: '100%', justifyContent: 'center', padding: '0.85rem' }}
+            >
+              <PlayCircle size={18} /> Enter Learning Workspace
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

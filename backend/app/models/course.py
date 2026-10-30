@@ -17,6 +17,7 @@ class Course(Base):
     level = Column(String(50), default="beginner", nullable=False)  # beginner, intermediate, advanced
     status = Column(String(50), default="published", nullable=False, index=True)  # draft, published, archived
     thumbnail_url = Column(String(500), nullable=True)
+    price = Column(Integer, default=0, nullable=False)  # In INR (0 = Free)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow, nullable=False)
 

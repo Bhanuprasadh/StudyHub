@@ -13,11 +13,14 @@ import {
   GraduationCap,
   PlayCircle,
   FileQuestion,
+  CreditCard,
+  Receipt,
 } from 'lucide-react';
 
 const StudentDashboard = () => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState(null);
+  const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,8 +29,12 @@ const StudentDashboard = () => {
 
   const fetchDashboard = async () => {
     try {
-      const res = await apiClient.get('/users/me/dashboard');
-      setDashboardData(res.data);
+      const [resDash, resTx] = await Promise.all([
+        apiClient.get('/users/me/dashboard'),
+        apiClient.get('/payments/my-transactions').catch(() => ({ data: [] })),
+      ]);
+      setDashboardData(resDash.data);
+      setTransactions(resTx.data || []);
     } catch (err) {
       console.error('Failed to load dashboard:', err);
     } finally {
@@ -222,6 +229,76 @@ const StudentDashboard = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Razorpay Order & Payment Receipts */}
+      <div style={{ marginTop: '3.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <div style={{ background: 'rgba(79, 70, 229, 0.1)', color: 'var(--primary)', padding: '6px', borderRadius: '8px', display: 'flex' }}>
+              <CreditCard size={20} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: 'var(--text-main)' }}>
+                Razorpay Payment Receipts & Billing
+              </h2>
+              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                Official transaction statements and course enrollment receipts
+              </span>
+            </div>
+          </div>
+          <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+            {transactions.length} Verified {transactions.length === 1 ? 'Transaction' : 'Transactions'}
+          </span>
+        </div>
+
+        {transactions.length === 0 ? (
+          <div className="card" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+            <p style={{ margin: '0 0 0.5rem 0' }}>No Razorpay transactions found for this account.</p>
+            <p style={{ margin: 0, fontSize: '0.8rem' }}>When you enroll in premium courses with Razorpay, your tax receipts and transaction records will appear here.</p>
+          </div>
+        ) : (
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table className="lesson-table" style={{ margin: 0 }}>
+                <thead>
+                  <tr>
+                    <th>Receipt ID</th>
+                    <th>Course Title</th>
+                    <th>Amount (INR)</th>
+                    <th>Razorpay Payment ID</th>
+                    <th>Order Reference</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {transactions.map((tx) => (
+                    <tr key={tx.id}>
+                      <td><code style={{ fontSize: '0.78rem' }}>{tx.receipt || `rcpt_${tx.id}`}</code></td>
+                      <td><strong>{tx.course_title}</strong></td>
+                      <td><strong style={{ color: 'var(--primary)', fontSize: '0.95rem' }}>₹{tx.amount} INR</strong></td>
+                      <td><code style={{ fontSize: '0.78rem' }}>{tx.payment_id || 'N/A'}</code></td>
+                      <td><code style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{tx.order_id}</code></td>
+                      <td>
+                        <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.72rem' }}>
+                          <CheckCircle size={11} /> Paid
+                        </span>
+                      </td>
+                      <td style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                        {new Date(tx.created_at).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

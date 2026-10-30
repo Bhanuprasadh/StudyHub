@@ -4,13 +4,13 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688.svg)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791.svg)](https://www.postgresql.org/)
 [![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-2.0+-red.svg)](https://www.sqlalchemy.org/)
+[![Razorpay](https://img.shields.io/badge/Razorpay-Payment%20Gateway-0C2340.svg)](https://razorpay.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB.svg)](https://react.dev/)
-[![Alembic](https://img.shields.io/badge/Alembic-Migrations-orange.svg)](https://alembic.sqlalchemy.org/)
-[![Pytest](https://img.shields.io/badge/Tests-Pytest%2020%2F20%20Pass-brightgreen.svg)]()
-[![Vitest](https://img.shields.io/badge/Frontend-Vitest%20Pass-brightgreen.svg)]()
+[![Pytest](https://img.shields.io/badge/Tests-Pytest%2027%2F27%20Pass-brightgreen.svg)]()
+[![Vitest](https://img.shields.io/badge/Frontend-Vitest%207%2F7%20Pass-brightgreen.svg)]()
 
-> **M.Tech Academic Capstone Project**  
-> Centralized learning and academic collaboration platform built using React, Python FastAPI, SQLAlchemy ORM, Alembic, and PostgreSQL.
+> **Production-Ready Academic & Enterprise Learning Management Platform**  
+> Built with React, Python FastAPI, SQLAlchemy ORM, PostgreSQL, Razorpay Payment Gateway, SMTP Email Engine, and JWT Authentication with Refresh Tokens.
 
 ---
 
@@ -28,11 +28,24 @@
 
 ---
 
-## 🎯 Project Vision & Overview
+## 🎯 Project Vision & Key Capabilities
 
 StudyHub provides students, faculty, and administrators with an integrated digital educational ecosystem:
-- **Course Catalog & Filtering**: Searchable catalog with difficulty and category filters.
-- **Student Dashboard**: Aggregated course enrollments, real-time lesson progress, and quiz history.
+- **💳 Razorpay Payment Gateway**: Seamless course purchasing with backend order creation (`/create-order`), cryptographic HMAC-SHA256 signature verification (`/verify`), course pricing, and student billing receipts history. Includes automated sandbox fallback for zero-setup local testing.
+- **✉️ Automated Email Notification Engine**: Asynchronous SMTP dispatch (`BackgroundTasks`) with responsive, branded HTML templates for:
+  - Welcome email on registration.
+  - Course enrollment confirmation with Razorpay transaction receipts.
+  - Quiz completion results with score breakdown and pass/fail indicators.
+  - Course curriculum update alerts to all enrolled students when new lessons are added.
+  - Secure signed password recovery emails.
+  *(Gracefully logs formatted email previews to console if live SMTP credentials are not configured).*
+- **🔐 Enterprise JWT Authentication & Security**:
+  - Short-lived Access Tokens (60 min) + 7-day Refresh Tokens (`/api/v1/auth/refresh`).
+  - Axios response interceptor for automatic, seamless token rotation with request retry queue.
+  - Time-limited signed Password Reset Tokens (15 min) with frontend reset screens.
+  - Password hashing with salted `bcrypt` and strict role-based access control (Student, Instructor, Admin).
+- **Course Catalog & Filtering**: Searchable catalog with difficulty, price, and category filters.
+- **Student Dashboard**: Aggregated enrollments, lesson progress, quiz attempts, and payment receipts.
 - **Curriculum & Learning Workspace**: Structured modules, lessons, notes, and downloadable references.
 - **Assessments & Quizzes**: Timed multiple-choice quizzes with strict server-side grading and answer confidentiality.
 - **Course Discussion Forum**: Threaded discussions, student replies, and instructor/admin moderation.
@@ -43,10 +56,12 @@ StudyHub provides students, faculty, and administrators with an integrated digit
 
 ## 🛠 Technology Stack
 
-- **Frontend**: React 18, React Router v7, Axios, Lucide Icons, Vanilla CSS Design Token System.
-- **Backend**: Python 3.12, FastAPI, Pydantic v2, PyJWT, bcrypt.
-- **Database & ORM**: PostgreSQL 15+, SQLAlchemy 2.0 ORM, Alembic database migrations.
-- **Testing**: Pytest (20 backend unit/integration tests), Vitest & React Testing Library (frontend).
+- **Frontend**: React 18, React Router v7, Axios with JWT Auto-Refresh Interceptors, Lucide Icons, Vanilla CSS Design System.
+- **Backend**: Python 3.12, FastAPI, Pydantic v2, PyJWT, bcrypt, Razorpay SDK, standard `smtplib` & `email.mime`.
+- **Database & ORM**: PostgreSQL 15+, SQLAlchemy 2.0 ORM (19 normalized relations), Alembic migrations.
+- **Payments**: Razorpay Standard Checkout SDK + Webhooks & SHA256 Signature Verification.
+- **Testing**: Pytest (27 backend unit/integration tests), Vitest & React Testing Library (7 frontend component tests).
+- **Deployment**: Docker, Multi-Stage Nginx Frontend, Docker Compose.
 
 ---
 
@@ -172,14 +187,136 @@ cd backend
 source ../.venv/bin/activate
 pytest -v
 ```
-**Results**: 20/20 tests passing (Health check, password hashing, JWT auth, duplicate enrollment prevention, role authorization, quiz answer confidentiality, server-side grading, and admin protection).
+**Results**: **27/27 tests passing 100%**:
+- Health check & database connection
+- Password hashing & verification with salted bcrypt
+- JWT Authentication (Access tokens, 7-day refresh tokens, token rotation)
+- Time-limited signed Password Reset tokens (15 min expiry)
+- Duplicate enrollment prevention & role authorization
+- Razorpay order creation (`/api/v1/payments/create-order`)
+- Cryptographic HMAC-SHA256 signature verification (`/api/v1/payments/verify`)
+- Student billing receipts and transaction history (`/api/v1/payments/my-transactions`)
+- Quiz answer confidentiality & server-side grading
+- Admin role route protection
 
 ### Frontend Test Suite (Vitest)
 ```bash
 cd frontend
 npm test
 ```
-**Results**: All Vitest test suites passing (App routing, navbar brand, credentials banner, and component rendering).
+**Results**: **7/7 tests passing 100%** (App routing, navbar brand, credentials banner, ForgotPasswordPage form, and component rendering).
+
+---
+
+## 🚢 Production Deployment Guide
+
+StudyHub is production-ready and can be deployed via **Docker Compose** (recommended) or as standalone services on any cloud provider (AWS, GCP, DigitalOcean, Render, Railway, or VPS).
+
+### Method 1: Turnkey Docker Deployment (Recommended)
+
+1. **Clone repository and configure environment variables**:
+   ```bash
+   git clone <repo-url>
+   cd StudyHub-FSWE
+   cp .env.example .env
+   # Edit .env to set your SECRET_KEY, RAZORPAY keys, and SMTP credentials
+   ```
+
+2. **Launch all services with Docker Compose**:
+   ```bash
+   docker compose up --build -d
+   ```
+   This automatically provisions:
+   - **PostgreSQL 15 Container** (`studyhub_db`) with volume persistence and health checks.
+   - **FastAPI Backend Container** (`studyhub_backend`) on port `8000`.
+   - **Nginx Frontend Container** (`studyhub_frontend`) on port `80` with client-side SPA routing and reverse-proxying.
+
+3. **Run database seed script inside the backend container**:
+   ```bash
+   docker compose exec backend python -m app.seed
+   ```
+   *Your app is now live at `http://localhost` (or your domain/IP).*
+
+---
+
+### Method 2: Manual Cloud VPS Deployment (Ubuntu / Debian)
+
+#### 1. Backend Service (Systemd + Gunicorn/Uvicorn)
+1. Install Python 3.12 and PostgreSQL:
+   ```bash
+   sudo apt update && sudo apt install -y python3-pip python3-venv postgresql postgresql-contrib nginx
+   ```
+2. Set up virtual environment and install dependencies:
+   ```bash
+   python3 -m venv /var/www/studyhub/backend/.venv
+   source /var/www/studyhub/backend/.venv/bin/activate
+   pip install -r /var/www/studyhub/backend/requirements.txt
+   ```
+3. Configure `systemd` service (`/etc/systemd/system/studyhub-backend.service`):
+   ```ini
+   [Unit]
+   Description=StudyHub FastAPI Backend
+   After=network.target postgresql.service
+
+   [Service]
+   User=www-data
+   WorkingDirectory=/var/www/studyhub/backend
+   EnvironmentFile=/var/www/studyhub/backend/.env
+   ExecStart=/var/www/studyhub/backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --workers 4
+   Restart=always
+
+   [Install]
+   WantedBy=multi-user.target
+   ```
+4. Enable and start:
+   ```bash
+   sudo systemctl daemon-reload && sudo systemctl enable --now studyhub-backend
+   ```
+
+#### 2. Frontend Production Build & Nginx
+1. Build frontend assets:
+   ```bash
+   cd /var/www/studyhub/frontend
+   npm install && npm run build
+   ```
+2. Configure Nginx (`/etc/nginx/sites-available/studyhub`):
+   ```nginx
+   server {
+       listen 80;
+       server_name yourdomain.com;
+
+       location / {
+           root /var/www/studyhub/frontend/dist;
+           index index.html;
+           try_files $uri $uri/ /index.html;
+       }
+
+       location /api/ {
+           proxy_pass http://127.0.0.1:8000/api/;
+           proxy_set_header Host $host;
+           proxy_set_header X-Real-IP $remote_addr;
+           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+           proxy_set_header X-Forwarded-Proto $scheme;
+       }
+   }
+   ```
+3. Enable SSL with Certbot:
+   ```bash
+   sudo certbot --nginx -d yourdomain.com
+   ```
+
+---
+
+### 🔑 Production Checklist & Configuration
+
+| Service | Setting | Description |
+| :--- | :--- | :--- |
+| **Razorpay** | `RAZORPAY_KEY_ID` | Replace `rzp_test_...` with your live key `rzp_live_...` from the [Razorpay Dashboard](https://dashboard.razorpay.com/#/app/keys). |
+| **Razorpay** | `RAZORPAY_KEY_SECRET` | Your live secret key from Razorpay Dashboard. |
+| **Email** | `EMAILS_ENABLED` | Set to `True` to enable real outbound email delivery. |
+| **Email** | `SMTP_USER` & `SMTP_PASSWORD` | Your SMTP provider credentials (e.g., Gmail App Password or SendGrid API Key). |
+| **Security** | `SECRET_KEY` | Generate a cryptographically secure random string: `openssl rand -hex 32`. |
+| **CORS** | `CORS_ORIGINS` | Restrict to your production domain (e.g. `https://studyhub.edu`). |
 
 ---
 
@@ -188,7 +325,7 @@ npm test
 With the backend running, visit:
 - **Swagger UI**: [http://localhost:8000/docs](http://localhost:8000/docs)
 - **ReDoc**: [http://localhost:8000/redoc](http://localhost:8000/redoc)
-- **Health Check**: [http://localhost:8000/health](http://localhost:8000/health)
+- **Health Check**: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 
 ---
 

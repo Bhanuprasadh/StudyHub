@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User, UserRole
@@ -6,7 +6,9 @@ from app.models.module import Module
 from app.models.lesson import Lesson
 from app.models.resource import Resource
 from app.models.enrollment import Enrollment
+from app.models.notification import Notification
 from app.schemas.course import LessonCreate, LessonUpdate, LessonResponse, ResourceCreate, ResourceResponse
+from app.services.email import send_course_update_email
 from app.api.deps import get_current_user, require_instructor
 
 router = APIRouter(prefix="/lessons", tags=["Lessons"])
@@ -16,6 +18,7 @@ router = APIRouter(prefix="/lessons", tags=["Lessons"])
 def add_lesson(
     module_id: int,
     lesson_in: LessonCreate,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_instructor)
 ):
@@ -36,6 +39,30 @@ def add_lesson(
         order_index=lesson_in.order_index,
     )
     db.add(new_lesson)
+
+    # Notify enrolled students
+    enrolled_students = (
+        db.query(User)
+        .join(Enrollment, User.id == Enrollment.user_id)
+        .filter(Enrollment.course_id == module.course_id)
+        .all()
+    )
+    for student in enrolled_students:
+        notif = Notification(
+            user_id=student.id,
+            title=f"New Lesson in {module.course.title}",
+            message=f"'{new_lesson.title}' is now available in your curriculum roadmap.",
+        )
+        db.add(notif)
+        background_tasks.add_task(
+            send_course_update_email,
+            to_email=student.email,
+            full_name=student.full_name,
+            course_title=module.course.title,
+            update_title=new_lesson.title,
+            course_id=module.course_id
+        )
+
     db.commit()
     db.refresh(new_lesson)
     return new_lesson

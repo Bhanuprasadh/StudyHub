@@ -79,5 +79,24 @@ Here is code implementation.
     expect(screen.getByText(/Return 201 Created on resource insertion/i)).toBeInTheDocument();
     expect(screen.getByText(/Pro Engineering Tip/i)).toBeInTheDocument();
   });
+
+  it('renders ForgotPasswordPage with email input and recovery action', async () => {
+    const { default: ForgotPasswordPage } = await import('../pages/ForgotPasswordPage');
+    const { BrowserRouter } = await import('react-router-dom');
+    const { AuthProvider } = await import('../context/AuthContext');
+
+    render(
+      <AuthProvider>
+        <BrowserRouter>
+          <ForgotPasswordPage />
+        </BrowserRouter>
+      </AuthProvider>
+    );
+
+    expect(screen.getByRole('heading', { name: /Reset Password/i })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/name@studyhub.edu/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Send Recovery Instructions/i })).toBeInTheDocument();
+  });
 });
+
 

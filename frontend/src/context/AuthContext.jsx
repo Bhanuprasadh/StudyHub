@@ -42,8 +42,11 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await apiClient.post('/auth/login', { email, password });
-    const { access_token, user: userData } = res.data;
+    const { access_token, refresh_token, user: userData } = res.data;
     localStorage.setItem('studyhub_token', access_token);
+    if (refresh_token) {
+      localStorage.setItem('studyhub_refresh_token', refresh_token);
+    }
     localStorage.setItem('studyhub_user', JSON.stringify(userData));
     setToken(access_token);
     setUser(userData);
@@ -57,8 +60,11 @@ export const AuthProvider = ({ children }) => {
       full_name,
       role,
     });
-    const { access_token, user: userData } = res.data;
+    const { access_token, refresh_token, user: userData } = res.data;
     localStorage.setItem('studyhub_token', access_token);
+    if (refresh_token) {
+      localStorage.setItem('studyhub_refresh_token', refresh_token);
+    }
     localStorage.setItem('studyhub_user', JSON.stringify(userData));
     setToken(access_token);
     setUser(userData);
@@ -67,9 +73,23 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('studyhub_token');
+    localStorage.removeItem('studyhub_refresh_token');
     localStorage.removeItem('studyhub_user');
     setToken(null);
     setUser(null);
+  };
+
+  const forgotPassword = async (email) => {
+    const res = await apiClient.post('/auth/forgot-password', { email });
+    return res.data;
+  };
+
+  const resetPassword = async (resetToken, newPassword) => {
+    const res = await apiClient.post('/auth/reset-password', {
+      token: resetToken,
+      new_password: newPassword,
+    });
+    return res.data;
   };
 
   const updateUser = (updatedData) => {
@@ -92,6 +112,8 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
+    forgotPassword,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
