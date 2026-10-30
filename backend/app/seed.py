@@ -21,9 +21,9 @@ from app.models.notification import Notification
 from app.services.auth import hash_password
 
 
-def seed_database():
+def seed_database(custom_db=None):
     print("🌱 Initializing StudyHub Database Seeder...")
-    db = SessionLocal()
+    db = custom_db if custom_db is not None else SessionLocal()
 
     try:
         # Check if already seeded
@@ -464,7 +464,8 @@ Design tokens encapsulate visual design choices:
         print(f"❌ Error seeding database: {e}")
         raise e
     finally:
-        db.close()
+        if custom_db is None:
+            db.close()
 
 
 if __name__ == "__main__":

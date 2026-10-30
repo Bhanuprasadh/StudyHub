@@ -1,0 +1,76 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# StudyHub Production Compose Overrides: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ──────────────────────────────────────────────────────────────────────────────
+services:
+  db:
+    restart: always
+    ports: [] # Do not expose database port to host in production
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  redis:
+    restart: always
+    ports: [] # Internal network only
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  backend:
+    restart: always
+    ports: [] # Internal network only; avoids host port collision across replicas and routes via Nginx
+    environment:
+      DEBUG: "false"
+      ENVIRONMENT: "production"
+      COOKIE_SECURE: "true"
+      COOKIE_SAMESITE: "lax"
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1024M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  frontend:
+    restart: always
+    build:
+      args:
+        VITE_API_BASE_URL: /api/v1
+    ports:
+      - "80:80"
+      - "443:443"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, or_
 from typing import List, Optional
 from app.database import get_db
@@ -96,10 +96,32 @@ def get_all_courses_for_admin(
 ):
     """List all courses including draft, published, and archived."""
     offset = (page - 1) * limit
-    courses = db.query(Course).order_by(Course.created_at.desc()).offset(offset).limit(limit).all()
+    # Eager-load instructor + category to avoid N+1 lazy loads
+    courses = (
+        db.query(Course)
+        .options(joinedload(Course.instructor), joinedload(Course.category))
+        .order_by(Course.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+    if not courses:
+        return []
+
+    course_ids = [c.id for c in courses]
+
+    # Bulk enrollment count per course (eliminates N+1)
+    enroll_counts = (
+        db.query(Enrollment.course_id, func.count(Enrollment.id).label("cnt"))
+        .filter(Enrollment.course_id.in_(course_ids))
+        .group_by(Enrollment.course_id)
+        .all()
+    )
+    enroll_map = {row.course_id: row.cnt for row in enroll_counts}
+
     results = []
     for c in courses:
-        student_count = db.query(func.count(Enrollment.id)).filter(Enrollment.course_id == c.id).scalar() or 0
         results.append({
             "id": c.id,
             "title": c.title,
@@ -109,7 +131,7 @@ def get_all_courses_for_admin(
             "category_name": c.category.name if c.category else "Uncategorized",
             "status": c.status,
             "level": c.level,
-            "total_students": student_count,
+            "total_students": enroll_map.get(c.id, 0),
             "created_at": c.created_at,
         })
     return results

@@ -1,76 +1,76 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import apiClient from '../api/client';
+/**
+ * AuthContext — Production-grade authentication state management
+ *
+ * Token strategy:
+ * - Access token: in-memory only (not persisted), short-lived (15 min)
+ * - Refresh token: HttpOnly cookie (set by server, never accessible to JS)
+ * - On page reload: silent refresh via /auth/refresh (cookie auto-sent)
+ * - Logout: calls server to revoke refresh token, then clears in-memory state
+ */
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import apiClient, { setAccessToken, clearAccessToken } from '../api/client';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('studyhub_token') || null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // true while verifying session on mount
 
-  // Initialize auth state from stored token
+  /**
+   * Attempt a silent token refresh on page load.
+   * If the HttpOnly refresh cookie is still valid, we get a new access token
+   * and restore the session without any user-visible action.
+   */
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem('studyhub_token');
-      if (storedToken) {
-        try {
-          const res = await apiClient.get('/auth/me');
-          setUser(res.data);
-          localStorage.setItem('studyhub_user', JSON.stringify(res.data));
-        } catch (err) {
-          console.warn('Session expired or invalid token:', err);
-          logout();
-        }
+      try {
+        const { data } = await apiClient.post('/auth/refresh', {});
+        setAccessToken(data.access_token);
+        setUser(data.user);
+      } catch {
+        // No valid refresh cookie — user is logged out, which is fine
+        clearAccessToken();
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     initAuth();
   }, []);
 
-  const login = async (email, password) => {
-    const res = await apiClient.post('/auth/login', { email, password });
-    const { access_token, user: userData } = res.data;
-    localStorage.setItem('studyhub_token', access_token);
-    localStorage.setItem('studyhub_user', JSON.stringify(userData));
-    setToken(access_token);
-    setUser(userData);
-    return userData;
-  };
+  const login = useCallback(async (email, password) => {
+    const { data } = await apiClient.post('/auth/login', { email, password });
+    setAccessToken(data.access_token);
+    setUser(data.user);
+    return data.user;
+  }, []);
 
-  const register = async (email, password, full_name, role = 'student') => {
-    const res = await apiClient.post('/auth/register', {
-      email,
-      password,
-      full_name,
-      role,
-    });
-    const { access_token, user: userData } = res.data;
-    localStorage.setItem('studyhub_token', access_token);
-    localStorage.setItem('studyhub_user', JSON.stringify(userData));
-    setToken(access_token);
-    setUser(userData);
-    return userData;
-  };
+  const register = useCallback(async (email, password, full_name, role = 'student') => {
+    const { data } = await apiClient.post('/auth/register', { email, password, full_name, role });
+    setAccessToken(data.access_token);
+    setUser(data.user);
+    return data.user;
+  }, []);
 
-  const logout = () => {
-    localStorage.removeItem('studyhub_token');
-    localStorage.removeItem('studyhub_user');
-    setToken(null);
-    setUser(null);
-  };
+  const logout = useCallback(async () => {
+    try {
+      // Revoke refresh token server-side (clears HttpOnly cookie too)
+      await apiClient.post('/auth/logout');
+    } catch {
+      // Even if the call fails, clear client state
+    } finally {
+      clearAccessToken();
+      setUser(null);
+    }
+  }, []);
 
-  const updateUser = (updatedData) => {
-    setUser((prev) => {
-      const merged = { ...prev, ...updatedData };
-      localStorage.setItem('studyhub_user', JSON.stringify(merged));
-      return merged;
-    });
-  };
+  const updateUser = useCallback((updatedData) => {
+    setUser((prev) => ({ ...prev, ...updatedData }));
+  }, []);
 
   const value = {
     user,
-    token,
     loading,
     isAuthenticated: !!user,
     isStudent: user?.role === 'student',
