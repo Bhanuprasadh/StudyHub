@@ -147,6 +147,30 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 
+# ── Root Welcome & API Index Endpoints ─────────────────────────────────────────
+@app.get("/", tags=["Root"])
+@app.get("/api", tags=["Root"])
+@app.get("/api/v1", tags=["Root"])
+def root_index():
+    """Root welcome endpoint — confirms backend is online and guides to docs and health."""
+    return {
+        "message": "StudyHub Platform API is online and running successfully!",
+        "status": "healthy",
+        "version": "2.0.0",
+        "documentation": "/docs",
+        "redoc": "/redoc",
+        "health_check": "/api/v1/health",
+        "endpoints": {
+            "courses": "/api/v1/courses",
+            "categories": "/api/v1/categories",
+            "auth": "/api/v1/auth",
+            "enrollments": "/api/v1/enrollments",
+            "quizzes": "/api/v1/quizzes",
+            "payments": "/api/v1/payments",
+        },
+    }
+
+
 # ── Health Endpoints ──────────────────────────────────────────────────────────
 @app.get("/health", tags=["Health"])
 @app.get("/api/v1/health", tags=["Health"])
