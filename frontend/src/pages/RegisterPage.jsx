@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { GraduationCap, UserPlus, AlertCircle } from 'lucide-react';
+import { GraduationCap, UserPlus, AlertCircle, Eye, EyeOff } from 'lucide-react';
 
 const RegisterPage = () => {
   const { register } = useAuth();
@@ -10,6 +10,7 @@ const RegisterPage = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState('student');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -25,7 +26,8 @@ const RegisterPage = () => {
 
     setSubmitting(true);
     try {
-      const user = await register(email, password, fullName, role);
+      const user = await register(email.trim().toLowerCase(), password, fullName.trim(), role);
+      localStorage.setItem('studyhub_saved_email', email.trim().toLowerCase());
       if (user.role === 'instructor') {
         navigate('/instructor');
       } else {
@@ -41,8 +43,8 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="app-container main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2.5rem' }}>
+    <div className="app-container main-content" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 'calc(100vh - 180px)' }}>
+      <div className="card" style={{ maxWidth: '480px', width: '100%', padding: '2.5rem', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04)' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div
             style={{
@@ -66,9 +68,9 @@ const RegisterPage = () => {
         </div>
 
         {error && (
-          <div className="alert alert-error">
+          <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
             <AlertCircle size={18} />
-            <span>{error}</span>
+            <span style={{ fontSize: '0.875rem' }}>{error}</span>
           </div>
         )}
 
@@ -81,8 +83,9 @@ const RegisterPage = () => {
               className="form-input"
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
-              placeholder="e.g. Alan Turing"
+              placeholder="e.g. Bhanu Prasad"
               required
+              autoComplete="name"
             />
           </div>
 
@@ -94,22 +97,43 @@ const RegisterPage = () => {
               className="form-input"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="e.g. user@studyhub.edu"
+              placeholder="e.g. student@studyhub.edu"
               required
+              autoComplete="email"
             />
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="password">Password (min 6 characters)</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+              <label className="form-label" htmlFor="password" style={{ marginBottom: 0 }}>Password (min 6 characters)</label>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  fontSize: '0.78rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  padding: 0,
+                }}
+              >
+                {showPassword ? <><EyeOff size={14} /> Hide</> : <><Eye size={14} /> Show</>}
+              </button>
+            </div>
             <input
               id="password"
-              type="password"
+              type={showPassword ? 'text' : 'password'}
               className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••••••"
               required
               minLength={6}
+              autoComplete="new-password"
             />
           </div>
 
@@ -129,7 +153,7 @@ const RegisterPage = () => {
           <button
             type="submit"
             className="btn btn-primary"
-            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem' }}
+            style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
             disabled={submitting}
           >
             {submitting ? 'Registering...' : <><UserPlus size={18} /> Complete Registration</>}

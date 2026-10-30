@@ -26,8 +26,10 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
-      // If unauthorized on protected calls, clear stale auth state
+    // Only clear token if an authenticated protected endpoint failed with 401
+    // (do NOT clear on login attempt failures)
+    const isAuthRoute = error.config?.url?.includes('/auth/login') || error.config?.url?.includes('/auth/register');
+    if (error.response && error.response.status === 401 && !isAuthRoute) {
       if (localStorage.getItem('studyhub_token')) {
         localStorage.removeItem('studyhub_token');
         localStorage.removeItem('studyhub_user');

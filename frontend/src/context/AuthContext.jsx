@@ -4,11 +4,18 @@ import apiClient from '../api/client';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('studyhub_token') || null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('studyhub_user');
+      return savedUser ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+  const [token, setToken] = useState(() => localStorage.getItem('studyhub_token') || null);
+  const [loading, setLoading] = useState(false);
 
-  // Initialize auth state from stored token
+  // Revalidate auth state in background without jarring logout on transient network glitch
   useEffect(() => {
     const initAuth = async () => {
       const storedToken = localStorage.getItem('studyhub_token');
@@ -18,8 +25,13 @@ export const AuthProvider = ({ children }) => {
           setUser(res.data);
           localStorage.setItem('studyhub_user', JSON.stringify(res.data));
         } catch (err) {
-          console.warn('Session expired or invalid token:', err);
-          logout();
+          // Only clear session if token is explicitly rejected as unauthorized (401)
+          if (err.response && err.response.status === 401) {
+            console.warn('Session expired or unauthorized token:', err);
+            logout();
+          } else {
+            console.warn('Could not revalidate user via /auth/me (backend may be reloading); keeping local session:', err);
+          }
         }
       }
       setLoading(false);

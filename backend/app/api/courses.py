@@ -52,7 +52,7 @@ def get_courses(
         query = query.filter(Course.level == level)
 
     offset = (page - 1) * limit
-    courses = query.order_by(Course.created_at.desc()).offset(offset).limit(limit).all()
+    courses = query.order_by(Course.id.asc()).offset(offset).limit(limit).all()
 
     # Annotate total lessons and enrollments
     results = []
