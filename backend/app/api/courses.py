@@ -143,6 +143,8 @@ def get_course_detail(
         course = db.query(Course).filter(Course.id == int(course_id_or_slug)).first()
     else:
         course = db.query(Course).filter(Course.slug == course_id_or_slug).first()
+        if not course:
+            course = db.query(Course).filter(Course.slug.ilike(f"{course_id_or_slug}%")).first()
 
     if not course:
         raise HTTPException(status_code=404, detail="Course not found")

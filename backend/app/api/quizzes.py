@@ -12,7 +12,7 @@ from app.schemas.quiz import (
     QuizCreate, QuizPublicResponse, QuizInstructorResponse, QuizSubmission, QuizAttemptResponse, AttemptAnswerDetail
 )
 from app.services.email import send_quiz_result_email
-from app.api.deps import get_current_user, require_instructor
+from app.api.deps import get_current_user, get_current_user_optional, require_instructor
 
 router = APIRouter(prefix="/quizzes", tags=["Quizzes"])
 
@@ -70,7 +70,7 @@ def create_quiz(
 def get_course_quizzes(
     course_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     """List quizzes for a given course."""
     quizzes = db.query(Quiz).filter(Quiz.course_id == course_id).all()
@@ -89,27 +89,29 @@ def get_course_quizzes(
     )
     question_map = {row.quiz_id: row.cnt for row in question_counts}
 
-    # Bulk: latest attempt per quiz for this user (eliminates N+1)
-    latest_attempts_subq = (
-        db.query(
-            QuizAttempt.quiz_id,
-            func.max(QuizAttempt.started_at).label("latest_started_at")
+    attempts_map = {}
+    if current_user:
+        # Bulk: latest attempt per quiz for this user (eliminates N+1)
+        latest_attempts_subq = (
+            db.query(
+                QuizAttempt.quiz_id,
+                func.max(QuizAttempt.started_at).label("latest_started_at")
+            )
+            .filter(QuizAttempt.quiz_id.in_(quiz_ids), QuizAttempt.user_id == current_user.id)
+            .group_by(QuizAttempt.quiz_id)
+            .subquery()
         )
-        .filter(QuizAttempt.quiz_id.in_(quiz_ids), QuizAttempt.user_id == current_user.id)
-        .group_by(QuizAttempt.quiz_id)
-        .subquery()
-    )
-    latest_attempts = (
-        db.query(QuizAttempt)
-        .join(
-            latest_attempts_subq,
-            (QuizAttempt.quiz_id == latest_attempts_subq.c.quiz_id) &
-            (QuizAttempt.started_at == latest_attempts_subq.c.latest_started_at)
+        latest_attempts = (
+            db.query(QuizAttempt)
+            .join(
+                latest_attempts_subq,
+                (QuizAttempt.quiz_id == latest_attempts_subq.c.quiz_id) &
+                (QuizAttempt.started_at == latest_attempts_subq.c.latest_started_at)
+            )
+            .filter(QuizAttempt.user_id == current_user.id)
+            .all()
         )
-        .filter(QuizAttempt.user_id == current_user.id)
-        .all()
-    )
-    attempts_map = {att.quiz_id: att for att in latest_attempts}
+        attempts_map = {att.quiz_id: att for att in latest_attempts}
 
     results = []
     for q in quizzes:
